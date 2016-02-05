@@ -1,0 +1,27 @@
+.oeu-error {
+	white-space: pre;
+}
+
+.oeu-info {
+	font-style: italic;
+	font-size: smaller;
+	padding: 5px 0 2px 5px;
+}
+
+.oeu-center {
+	text-align: center;
+}
+
+.oeu input {
+	width: 30px;
+	padding: 5px;
+}
+
+.oeu .fieldlabel {
+	text-transform: capitalize;
+}
+
+.oeu input {
+	width: 40px;
+	display: inline-block;
+}
