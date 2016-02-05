@@ -66,6 +66,11 @@ class OnAppvCDModule {
 		return $this->buildArray( $data );
 	}
 
+	public function BillingCompanyPlans() {
+		$data = $this->getObject( 'BillingCompany' )->getList();
+		return $this->buildArray( $data );
+	}
+
 	public function getLocales() {
 		$tmp = [ ];
 		foreach( $this->getObject( 'Locale' )->getList() as $locale ) {
@@ -76,6 +81,11 @@ class OnAppvCDModule {
 		}
 
 		return $tmp;
+	}
+
+	public function getHyperVisors() {
+		$data = $this->getObject( 'Hypervisor' )->getList();
+		return $this->buildArray( $data );
 	}
 
 	public function getData() {
@@ -89,11 +99,13 @@ class OnAppvCDModule {
 
 		if( empty( $data ) ) {
 			# get data from OnApp CP
-			$data               = new stdClass;
-			$data->BillingPlans = $this->getBillingPlans();
-			$data->Roles        = $this->getRoles();
-			$data->UserGroups   = $this->getUserGroups();
-			$data->Locales      = $this->getLocales();
+			$data                      = new stdClass;
+			$data->BillingPlans        = $this->getBillingPlans();
+			$data->BillingCompanyPlans = $this->BillingCompanyPlans();
+			$data->HyperVisors         = $this->getHyperVisors();
+			$data->Roles               = $this->getRoles();
+			$data->UserGroups          = $this->getUserGroups();
+			$data->Locales             = $this->getLocales();
 
 			# store data to DB
 			$values = [

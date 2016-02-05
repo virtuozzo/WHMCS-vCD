@@ -322,7 +322,6 @@ function ProductEditHook_OnAppvCD( $vars ) {
 				   ->update( [
 					   'configoption2'  => $_POST[ $moduleName ][ 'BillingType' ],
 					   'configoption3'  => $_POST[ $moduleName ][ 'SuspendDays' ],
-					   'configoption4'  => $_POST[ $moduleName ][ 'TrialDays' ],
 					   'configoption5'  => $_POST[ $moduleName ][ 'DueDays' ],
 					   'configoption6'  => $_POST[ $moduleName ][ 'TerminateDays' ],
 					   'configoption7'  => $_POST[ $moduleName ][ 'OrganizationType' ],

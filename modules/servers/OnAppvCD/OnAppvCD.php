@@ -86,8 +86,26 @@ function OnAppvCD_CreateAccount( $params ) {
 	$password        = OnAppvCDModule::generatePassword();
 	$productSettings = json_decode( $params[ 'configoption24' ] )->$serverID;
 
-	if( ! $password ) {
-		return $lang->Error_CreateUser . ': ' . $lang->PasswordNotSet;
+	if( $productSettings->OrganizationType == 1 ) {
+		$userGroup = $productSettings->UserGroups;
+	}
+	else {
+		# create user group // todo add error handling and dupe title
+		$label = Capsule::table( 'tblcustomfieldsvalues' )
+			->where( 'relid', $serviceID )
+			->pluck( 'value' )
+		;
+		$userGroup = $module->getObject( 'UserGroup' );
+		$userGroup->label = $label;
+		$userGroup->assign_to_vcloud = true;
+		$userGroup->hypervisor_id = $productSettings->HyperVisor;
+		$userGroup->company_billing_plan_id = $productSettings->BillingPlanDefault;
+		$userGroup->save();
+
+		echo '<pre style="text-align: left;">';
+		print_r( $userGroup );
+
+		$userGroup = $userGroup->id;
 	}
 
 	$OnAppUser                   = $module->getObject( 'User' );
@@ -99,7 +117,7 @@ function OnAppvCD_CreateAccount( $params ) {
 	$OnAppUser->_billing_plan_id = $productSettings->BillingPlanDefault;
 	$OnAppUser->_role_ids        = $productSettings->Roles;
 	$OnAppUser->_time_zone       = $productSettings->TimeZone;
-	$OnAppUser->_user_group_id   = $productSettings->UserGroups;
+	$OnAppUser->_user_group_id   = $userGroup;
 	$OnAppUser->_locale          = $productSettings->Locale;
 
 	# trial user
@@ -130,29 +148,27 @@ function OnAppvCD_CreateAccount( $params ) {
 		return $lang->Error_CreateUser;
 	}
 
-	// Save user link in whmcs db
-	insert_query( 'OnAppUsersNG', array(
-		'serviceID'     => $params[ 'serviceid' ],
-		'WHMCSUserID'   => $params[ 'userid' ],
-		'OnAppUserID'   => $OnAppUser->_obj->_id,
-		'serverID'      => $params[ 'serverid' ],
-		'billingPlanID' => $OnAppUser->_billing_plan_id,
-		'billingType'   => $productSettings->BillingType,
-		'isTrial'       => $isTrial,
-	) );
+	# save user link
+	Capsule::table( $module::MODULE_NAME . '_Users' )
+		   ->insert( [
+			   'serviceID'     => $params[ 'serviceid' ],
+			   'WHMCSUserID'   => $params[ 'userid' ],
+			   'OnAppUserID'   => $OnAppUser->_obj->_id,
+			   'serverID'      => $params[ 'serverid' ],
+			   'billingPlanID' => $OnAppUser->_billing_plan_id,
+			   'billingType'   => $productSettings->BillingType,
+			   //'isTrial'       => $isTrial,
+		   ] );
 
-	// Save OnApp login and password
-	full_query(
-		"UPDATE
-				tblhosting
-			SET
-				password = '" . encrypt( $password ) . "',
-				username = '$userName'
-			WHERE
-				id = '$serviceID'"
-	);
-	// todo use placeholders
+	# save OnApp login and password
+	Capsule::table( 'tblhosting' )
+		   ->where( 'id', $serviceID )
+		   ->update( [
+			   'password' => encrypt( $password ),
+			   'username' => $userName,
+		   ] );
 
+	// todo rename subject
 	sendmessage( 'OnApp account has been created', $serviceID );
 
 	return 'success';

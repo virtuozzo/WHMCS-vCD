@@ -52,18 +52,18 @@
 			</td>
 		</tr>
 	{if $selectedServer}
-		<!-- billing plan default -->
+		<!-- hv -->
 		<tr>
 			<td class="fieldlabel">
-				{assign var="itemName" value="BillingPlan"}
+				{assign var="itemName" value="HyperVisor"}
 				{assign var="itemDescription" value="`$itemName`Description" }
 				{$lang->$itemName}
 			</td>
 			<td class="fieldarea">
-				<select name="{$moduleName}[BillingPlanDefault]" required>
+				<select name="{$moduleName}[HyperVisor]" required>
 					<option value=""></option>
-					{foreach from=$servers->$selectedServer->BillingPlans key=ID item=name}
-						{if $productSettings->BillingPlanDefault == $ID}
+					{foreach from=$servers->$selectedServer->HyperVisors key=ID item=name}
+						{if $productSettings->HyperVisor == $ID}
 							{assign var="selected" value="selected"}
 						{else}
 							{assign var="selected" value=""}
@@ -72,7 +72,7 @@
 					{/foreach}
 				</select>
 				<span class="oeu-info">
-					{$lang->$itemDescription->Default}
+					{$lang->$itemDescription}
 				</span>
 			</td>
 		</tr>
@@ -147,6 +147,85 @@
 				</span>
 			</td>
 		</tr>
+		<!-- billing plan default -->
+		<tr class="hidden">
+			<td colspan="2">
+				<select id="bp-regular">
+					{capture name="c1" assign="BPRegular"}
+					<option value=""></option>
+					{foreach from=$servers->$selectedServer->BillingPlans key=ID item=name}
+						{if $productSettings->BillingPlanDefault == $ID}
+							{assign var="selected" value="selected"}
+						{else}
+							{assign var="selected" value=""}
+						{/if}
+						<option value="{$ID}" {$selected}>{$name}</option>
+					{/foreach}
+					{/capture}
+					{$BPRegular}
+				</select>
+
+
+				<select id="bp-company">
+					{capture name="c1" assign="BPCompany"}
+					<option value=""></option>
+					{foreach from=$servers->$selectedServer->BillingCompanyPlans key=ID item=name}
+						{if $productSettings->BillingPlanDefault == $ID}
+							{assign var="selected" value="selected"}
+						{else}
+							{assign var="selected" value=""}
+						{/if}
+						<option value="{$ID}" {$selected}>{$name}</option>
+					{/foreach}
+					{/capture}
+					{$BPCompany}
+				</select>
+			</td>
+		</tr>
+		<tr>
+			<td class="fieldlabel">
+				{assign var="itemName" value="BillingPlan"}
+				{assign var="itemDescription" value="`$itemName`Description" }
+				{$lang->$itemName}
+			</td>
+			<td class="fieldarea">
+				<select name="{$moduleName}[BillingPlanDefault]" required id="billing-plan">
+					{if $productOptions.7 == 2}
+						{$BPCompany}
+					{else}
+						{$BPRegular}
+					{/if}
+				</select>
+				<span class="oeu-info">
+					{$lang->$itemDescription->Default}
+				</span>
+			</td>
+		</tr>
+		{*
+		<tr>
+			<td class="fieldlabel">
+				{assign var="itemName" value="BillingPlan"}
+				{assign var="itemDescription" value="`$itemName`Description" }
+				{$lang->$itemName}
+			</td>
+			<td class="fieldarea">
+				<select name="{$moduleName}[BillingPlanDefault]" required>
+					<option value=""></option>
+					{foreach from=$servers->$selectedServer->BillingPlans key=ID item=name}
+						{if $productSettings->BillingPlanDefault == $ID}
+							{assign var="selected" value="selected"}
+						{else}
+							{assign var="selected" value=""}
+						{/if}
+						<option value="{$ID}" {$selected}>{$name}</option>
+					{/foreach}
+				</select>
+				<span class="oeu-info">
+					{$lang->$itemDescription->Default}
+				</span>
+			</td>
+		</tr>
+		*}
 		<!-- groups -->
 		{if $productOptions.7 == 2}
 			<input type="hidden" name="{$moduleName}[OrganizationType]" value="2">
@@ -162,7 +241,7 @@
 				{$lang->$itemName}
 			</td>
 			<td class="fieldarea">
-				<select name="{$moduleName}[UserGroups][]" required {$groupDisabled}>
+				<select name="{$moduleName}[UserGroups]" required {$groupDisabled}>
 					{foreach from=$servers->$selectedServer->UserGroups key=ID item=name}
 						{if in_array($ID, $productSettings->UserGroups)}
 							{assign var="selected" value="selected"}
@@ -271,20 +350,6 @@
 			</td>
 			<td class="fieldarea">
 				<input type="number" name="{$moduleName}[TerminateDays]" min="0" value="{$productOptions.6|default:14}" class="form-control input-sm">
-				<span class="oeu-info">
-					{$lang->$itemDescription}
-				</span>
-			</td>
-		</tr>
-		<!-- trial days -->
-		<tr>
-			<td class="fieldlabel">
-				{assign var="itemName" value="TrialDays"}
-				{assign var="itemDescription" value="`$itemName`Description" }
-				{$lang->$itemName}
-			</td>
-			<td class="fieldarea">
-				<input type="number" name="{$moduleName}[TrialDays]" min="0" value="{$productOptions.4|default:7}" class="form-control input-sm">
 				<span class="oeu-info">
 					{$lang->$itemDescription}
 				</span>

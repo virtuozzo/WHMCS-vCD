@@ -55,16 +55,19 @@ $( document ).ready( function() {
 
 	// organization type handler
 	$( 'table.oeu #org-type' ).on( 'change', function() {
-		console.log( this.value );
 		if( this.value == 1 ) {
 			$( 'table.oeu #group-row select' ).prop( 'disabled', false );
 			$( 'table.oeu #group-row' ).show();
-			$( 'table.oeu select' ).trigger( 'chosen:updated' );
+
+			$('#billing-plan').html( $('#bp-regular').html() );
 		}
 		else {
 			$( 'table.oeu #group-row' ).hide();
 			$( 'table.oeu #group-row select' ).prop( 'disabled', true );
+
+			$( '#billing-plan' ).html( $( '#bp-company' ).html() );
 		}
+		$( 'table.oeu select' ).trigger( 'chosen:updated' );
 	} );
 
 	$( 'form[name="packagefrm"] input[type="submit"]' ).on( 'click', OnAppvCD_Validate );

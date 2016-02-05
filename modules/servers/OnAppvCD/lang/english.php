@@ -13,6 +13,8 @@ return [
       'Suspended' => 'billing plan for suspended users',
       'Trial' => 'billing plan for trial users',
     ],
+    'HyperVisor' => 'HyperVisor',
+    'HyperVisorDescription' => 'where to create user',
     'TimeZone' => 'Timezone',
     'TimeZoneDescription' => 'timezone for newly created users',
     'Locale' => 'Locale',
