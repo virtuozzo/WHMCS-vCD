@@ -100,11 +100,8 @@ function OnAppvCD_CreateAccount( $params ) {
 		$userGroup->assign_to_vcloud = true;
 		$userGroup->hypervisor_id = $productSettings->HyperVisor;
 		$userGroup->company_billing_plan_id = $productSettings->BillingPlanDefault;
+		$userGroup->billing_plan_ids = $productSettings->GroupBillingPlans;
 		$userGroup->save();
-
-		echo '<pre style="text-align: left;">';
-		print_r( $userGroup );
-
 		$userGroup = $userGroup->id;
 	}
 
@@ -176,6 +173,7 @@ function OnAppvCD_CreateAccount( $params ) {
 
 function OnAppvCD_TerminateAccount( $params ) {
 	$module = new OnAppvCDModule( $params );
+	$tableName = $module::MODULE_NAME . '_Users';
 	$lang   = $module->loadLang()->Admin;
 	if( ! file_exists( ONAPP_WRAPPER_INIT ) ) {
 		return $lang->Error_WrapperNotFound . realpath( ROOTDIR ) . '/includes';
@@ -185,31 +183,18 @@ function OnAppvCD_TerminateAccount( $params ) {
 	$clientID  = $params[ 'clientsdetails' ][ 'userid' ];
 	$serverID  = $params[ 'serverid' ];
 
-	$query = "SELECT
-					`OnAppUserID`
-				FROM
-					`OnAppUsersNG`
-				WHERE
-					serverID = $serverID
-					-- AND client_id = $clientID
-					AND serviceID = $serviceID";
-	// todo use placeholders
+	$OnAppUserID = Capsule::table( $tableName )
+		->where( 'serverID', $serverID )
+		->where( 'serviceID', $serviceID )
+		->pluck( 'OnAppUserID' )
+	;
 
-	$result = full_query( $query );
-	if( $result ) {
-		$OnAppUserID = mysql_result( $result, 0 );
-	}
 	if( ! $OnAppUserID ) {
 		return sprintf( $lang->Error_UserNotFound, $clientID, $serverID );
 	}
 
 	$module    = new OnAppvCDModule( $params );
 	$OnAppUser = $module->getObject( 'User' );
-	$vms       = $module->getObject( 'VirtualMachine' );
-	if( $vms->getList( $OnAppUserID ) ) {
-		return $lang->Error_TerminateUser;
-	}
-
 	$OnAppUser->_id = $OnAppUserID;
 	$OnAppUser->delete( true );
 
@@ -220,13 +205,10 @@ function OnAppvCD_TerminateAccount( $params ) {
 		return $errorMsg;
 	}
 	else {
-		$query = 'DELETE FROM
-						`OnAppUsersNG`
-					WHERE
-						serviceID = ' . (int)$serviceID . '
-						-- AND client_id = ' . (int)$clientID . '
-						AND serverID = ' . (int)$serverID;
-		full_query( $query );
+		Capsule::table( $tableName )
+			->where( 'serverID', $serverID )
+			->where( 'serviceID', $serviceID )
+			->delete();
 	}
 
 	sendmessage( 'OnApp account has been terminated', $serviceID );
@@ -340,7 +322,10 @@ function OnAppvCD_UnsuspendAccount( $params ) {
 function OnAppvCD_ClientArea( $params = '' ) {
 	if( isset( $_GET[ 'modop' ] ) && ( $_GET[ 'modop' ] == 'custom' ) ) {
 		if( isset( $_GET[ 'a' ] ) ) {
-			$functionName = 'OnAppElastic_Custom_' . $_GET[ 'a' ];
+			echo '<pre>';
+			exit( PHP_EOL . ' die at ' . __LINE__ . ' in ' . __FILE__ );
+
+			$functionName = OnAppvCDModule::MODULE_NAME . '_Custom_' . $_GET[ 'a' ];
 			if( function_exists( $functionName ) ) {
 				$functionName( $params );
 			}
@@ -349,9 +334,6 @@ function OnAppvCD_ClientArea( $params = '' ) {
 				exit( PHP_EOL . ' die at ' . __LINE__ . ' in ' . __FILE__ );
 			}
 		}
-	}
-	if( isset( $_GET[ 'getstat' ] ) ) {
-		OnAppvCD_OutstandingDetails( $params );
 	}
 
 	// todo fix lang loading

@@ -52,6 +52,39 @@
 			</td>
 		</tr>
 	{if $selectedServer}
+		<!-- holders for billing plan fields -->
+		<tr class="hidden">
+			<td colspan="2">
+				<select id="bp-regular">
+					{capture name="c1" assign="BPRegular"}
+						<option value=""></option>
+						{foreach from=$servers->$selectedServer->BillingPlans key=ID item=name}
+							{if $productSettings->BillingPlanDefault == $ID}
+								{assign var="selected" value="selected"}
+							{else}
+								{assign var="selected" value=""}
+							{/if}
+							<option value="{$ID}" {$selected}>{$name}</option>
+						{/foreach}
+					{/capture}
+					{$BPRegular}
+				</select>
+				<select id="bp-company">
+					{capture name="c1" assign="BPCompany"}
+						<option value=""></option>
+						{foreach from=$servers->$selectedServer->BillingCompanyPlans key=ID item=name}
+							{if $productSettings->BillingPlanDefault == $ID}
+								{assign var="selected" value="selected"}
+							{else}
+								{assign var="selected" value=""}
+							{/if}
+							<option value="{$ID}" {$selected}>{$name}</option>
+						{/foreach}
+					{/capture}
+					{$BPCompany}
+				</select>
+			</td>
+		</tr>
 		<!-- hv -->
 		<tr>
 			<td class="fieldlabel">
@@ -148,40 +181,6 @@
 			</td>
 		</tr>
 		<!-- billing plan default -->
-		<tr class="hidden">
-			<td colspan="2">
-				<select id="bp-regular">
-					{capture name="c1" assign="BPRegular"}
-					<option value=""></option>
-					{foreach from=$servers->$selectedServer->BillingPlans key=ID item=name}
-						{if $productSettings->BillingPlanDefault == $ID}
-							{assign var="selected" value="selected"}
-						{else}
-							{assign var="selected" value=""}
-						{/if}
-						<option value="{$ID}" {$selected}>{$name}</option>
-					{/foreach}
-					{/capture}
-					{$BPRegular}
-				</select>
-
-
-				<select id="bp-company">
-					{capture name="c1" assign="BPCompany"}
-					<option value=""></option>
-					{foreach from=$servers->$selectedServer->BillingCompanyPlans key=ID item=name}
-						{if $productSettings->BillingPlanDefault == $ID}
-							{assign var="selected" value="selected"}
-						{else}
-							{assign var="selected" value=""}
-						{/if}
-						<option value="{$ID}" {$selected}>{$name}</option>
-					{/foreach}
-					{/capture}
-					{$BPCompany}
-				</select>
-			</td>
-		</tr>
 		<tr>
 			<td class="fieldlabel">
 				{assign var="itemName" value="BillingPlan"}
@@ -201,18 +200,23 @@
 				</span>
 			</td>
 		</tr>
-		{*
-		<tr>
+		<!-- billing plan group -->
+		{if $productOptions.7 == 1}
+			<input type="hidden" name="{$moduleName}[OrganizationType]" value="2">
+			<tr class="collapse" id="group-bp-row">
+		{else}
+			<tr id="group-bp-row">
+		{/if}
 			<td class="fieldlabel">
-				{assign var="itemName" value="BillingPlan"}
+				{assign var="itemName" value="GroupBillingPlans"}
 				{assign var="itemDescription" value="`$itemName`Description" }
 				{$lang->$itemName}
 			</td>
 			<td class="fieldarea">
-				<select name="{$moduleName}[BillingPlanDefault]" required>
+				<select name="{$moduleName}[GroupBillingPlans][]" multiple required>
 					<option value=""></option>
 					{foreach from=$servers->$selectedServer->BillingPlans key=ID item=name}
-						{if $productSettings->BillingPlanDefault == $ID}
+						{if in_array($ID, $productSettings->GroupBillingPlans)}
 							{assign var="selected" value="selected"}
 						{else}
 							{assign var="selected" value=""}
@@ -225,7 +229,6 @@
 				</span>
 			</td>
 		</tr>
-		*}
 		<!-- groups -->
 		{if $productOptions.7 == 2}
 			<input type="hidden" name="{$moduleName}[OrganizationType]" value="2">

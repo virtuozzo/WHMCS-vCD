@@ -220,23 +220,17 @@ class OnAppvCDModule {
 	}
 
 	private static function getResourcesData( $params, $date ) {
-		$sql  = 'SELECT
-					`serverID`,
-					`WHMCSUserID`,
-					`OnAppUserID`
-				FROM
-					`OnAppElasticUsers`
-				WHERE
-					`serviceID` = ' . $params[ 'serviceid' ] . '
-				LIMIT 1';
-		$user = mysql_fetch_assoc( full_query( $sql ) );
+		$user = Capsule::table( OnAppvCDModule::MODULE_NAME . '_Users' )
+					   ->where( 'serviceID', $params[ 'serviceid' ] )
+					   ->select( 'serverID', 'WHMCSUserID', 'OnAppUserID' )
+					   ->first()
+		;
 
 		$serverAddr = $params[ 'serverhttpprefix' ] . '://';
 		$serverAddr .= ! empty( $params[ 'serverip' ] ) ? $params[ 'serverip' ] : $params[ 'serverhostname' ];
 
 		$date = http_build_query( $date );
-
-		$url  = $serverAddr . '/users/' . $user[ 'OnAppUserID' ] . '/user_statistics.json?' . $date;
+		$url  = $serverAddr . '/users/' . $user->OnAppUserID . '/user_statistics.json?' . $date;
 		$data = self::sendRequest( $url, $params[ 'serverusername' ], $params[ 'serverpassword' ] );
 
 		if( $data ) {
@@ -248,7 +242,7 @@ class OnAppvCDModule {
 	}
 
 	private static function sendRequest( $url, $user, $password ) {
-		require_once __DIR__ . '/includes/php/CURL.php';
+		require_once __DIR__ . '/CURL.php';
 
 		$curl = new CURL();
 		$curl->addOption( CURLOPT_USERPWD, $user . ':' . $password );

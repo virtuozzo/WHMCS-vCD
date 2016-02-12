@@ -13,6 +13,7 @@ return [
       'Suspended' => 'billing plan for suspended users',
       'Trial' => 'billing plan for trial users',
     ],
+    'GroupBillingPlans' => 'Group Billing Plans',
     'HyperVisor' => 'HyperVisor',
     'HyperVisorDescription' => 'where to create user',
     'TimeZone' => 'Timezone',
@@ -40,6 +41,7 @@ return [
       1 => 'Prepaid',
     ],
     'OrganizationType' => 'Organization type',
+    'OrganizationTypeDescription' => 'NA',
     'OrganizationTypeVariants' =>  [
       0 => 'Single',
       1 => 'Multiple',

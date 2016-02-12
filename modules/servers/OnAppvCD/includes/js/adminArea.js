@@ -60,12 +60,18 @@ $( document ).ready( function() {
 			$( 'table.oeu #group-row' ).show();
 
 			$('#billing-plan').html( $('#bp-regular').html() );
+
+			$( 'table.oeu #group-bp-row' ).hide();
+			$( 'table.oeu #group-bp-row select' ).prop( 'disabled', true );
 		}
 		else {
 			$( 'table.oeu #group-row' ).hide();
 			$( 'table.oeu #group-row select' ).prop( 'disabled', true );
 
 			$( '#billing-plan' ).html( $( '#bp-company' ).html() );
+
+			$( 'table.oeu #group-bp-row' ).show();
+			$( 'table.oeu #group-bp-row select' ).prop( 'disabled', false );
 		}
 		$( 'table.oeu select' ).trigger( 'chosen:updated' );
 	} );
