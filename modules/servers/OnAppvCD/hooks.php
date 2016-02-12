@@ -325,7 +325,7 @@ function ProductEditHook_OnAppvCD( $vars ) {
 					   'configoption5'  => $_POST[ $moduleName ][ 'DueDays' ],
 					   'configoption6'  => $_POST[ $moduleName ][ 'TerminateDays' ],
 					   'configoption7'  => $_POST[ $moduleName ][ 'OrganizationType' ],
-					   'configoption24' => json_encode( $settings )
+					   'configoption24' => json_encode( $settings ),
 				   ] );
 		}
 
@@ -345,22 +345,21 @@ function ProductEditHook_OnAppvCD( $vars ) {
 		# create custom field
 		if( $_POST[ $moduleName ][ 'OrganizationType' ] == 2 ) {
 			$exist = Capsule::table( 'tblcustomfields' )
-				->where( 'type', 'product' )
-				->where( 'fieldname', 'Organization Name' )
-				->where( 'relid', $vars[ 'pid' ] )
-				->first()
-			;
+							->where( 'type', 'product' )
+							->where( 'fieldname', 'Organization Name' )
+							->where( 'relid', $vars[ 'pid' ] )
+							->first();
 
 			if( ! $exist ) {
 				Capsule::table( 'tblcustomfields' )
-					->insert( [
-						'type'      => 'product',
-						'fieldtype' => 'text',
-						'required'  => 'on',
-						'showorder' => 'on',
-						'fieldname' => 'Organization Name',
-						'relid'     => $vars[ 'pid' ],
-					] );
+					   ->insert( [
+						   'type'      => 'product',
+						   'fieldtype' => 'text',
+						   'required'  => 'on',
+						   'showorder' => 'on',
+						   'fieldname' => 'Organization Name',
+						   'relid'     => $vars[ 'pid' ],
+					   ] );
 			}
 		}
 	}
@@ -368,8 +367,16 @@ function ProductEditHook_OnAppvCD( $vars ) {
 	return true;
 }
 
+function ServiceDeleteHook_OnAppvCD( $vars ) {
+	Capsule::table( OnAppvCDModule::MODULE_NAME . '_Users' )
+		   ->where( 'WHMCSUserID', $vars[ 'userid' ] )
+		   ->where( 'serviceID', $vars[ 'serviceid' ] )
+		   ->delete();
+}
+
 add_hook( 'InvoicePaid', 1, 'InvoicePaidHook_OnAppvCD' );
 add_hook( 'ProductEdit', 1, 'ProductEditHook_OnAppvCD' );
+add_hook( 'ServiceDelete', 1, 'ServiceDeleteHook_OnAppvCD' );
 add_hook( 'DailyCronJob', 1, 'AutoSuspendHook_OnAppvCD' );
 add_hook( 'DailyCronJob', 2, 'AutoTerminateHook_OnAppvCD' );
 add_hook( 'DailyCronJob', 3, 'TerminateTrialHook_OnAppvCD' );
