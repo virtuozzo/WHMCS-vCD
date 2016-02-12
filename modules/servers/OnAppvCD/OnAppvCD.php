@@ -31,8 +31,7 @@ function OnAppvCD_ConfigOptions() {
 						  'srv.username',
 						  'srv.password'
 					  )
-					  ->get()
-	;
+					  ->get();
 
 	if( empty( $servers ) ) {
 		$data->error = $data->lang->ServersNone;
@@ -91,16 +90,15 @@ function OnAppvCD_CreateAccount( $params ) {
 	}
 	else {
 		# create user group // todo add error handling and dupe title
-		$label = Capsule::table( 'tblcustomfieldsvalues' )
-			->where( 'relid', $serviceID )
-			->pluck( 'value' )
-		;
-		$userGroup = $module->getObject( 'UserGroup' );
-		$userGroup->label = $label;
-		$userGroup->assign_to_vcloud = true;
-		$userGroup->hypervisor_id = $productSettings->HyperVisor;
+		$label                              = Capsule::table( 'tblcustomfieldsvalues' )
+													 ->where( 'relid', $serviceID )
+													 ->pluck( 'value' );
+		$userGroup                          = $module->getObject( 'UserGroup' );
+		$userGroup->label                   = $label;
+		$userGroup->assign_to_vcloud        = true;
+		$userGroup->hypervisor_id           = $productSettings->HyperVisor;
 		$userGroup->company_billing_plan_id = $productSettings->BillingPlanDefault;
-		$userGroup->billing_plan_ids = $productSettings->GroupBillingPlans;
+		$userGroup->billing_plan_ids        = $productSettings->GroupBillingPlans;
 		$userGroup->save();
 		$userGroup = $userGroup->id;
 	}
@@ -172,29 +170,24 @@ function OnAppvCD_CreateAccount( $params ) {
 }
 
 function OnAppvCD_TerminateAccount( $params ) {
-	$module = new OnAppvCDModule( $params );
+	$module    = new OnAppvCDModule( $params );
 	$tableName = $module::MODULE_NAME . '_Users';
-	$lang   = $module->loadLang()->Admin;
-	if( ! file_exists( ONAPP_WRAPPER_INIT ) ) {
-		return $lang->Error_WrapperNotFound . realpath( ROOTDIR ) . '/includes';
-	}
+	$lang      = $module->loadLang()->Admin;
 
 	$serviceID = $params[ 'serviceid' ];
 	$clientID  = $params[ 'clientsdetails' ][ 'userid' ];
 	$serverID  = $params[ 'serverid' ];
 
 	$OnAppUserID = Capsule::table( $tableName )
-		->where( 'serverID', $serverID )
-		->where( 'serviceID', $serviceID )
-		->pluck( 'OnAppUserID' )
-	;
-
+						  ->where( 'serverID', $serverID )
+						  ->where( 'serviceID', $serviceID )
+						  ->pluck( 'OnAppUserID' );
 	if( ! $OnAppUserID ) {
 		return sprintf( $lang->Error_UserNotFound, $clientID, $serverID );
 	}
 
-	$module    = new OnAppvCDModule( $params );
-	$OnAppUser = $module->getObject( 'User' );
+	$module         = new OnAppvCDModule( $params );
+	$OnAppUser      = $module->getObject( 'User' );
 	$OnAppUser->_id = $OnAppUserID;
 	$OnAppUser->delete( true );
 
@@ -206,9 +199,9 @@ function OnAppvCD_TerminateAccount( $params ) {
 	}
 	else {
 		Capsule::table( $tableName )
-			->where( 'serverID', $serverID )
-			->where( 'serviceID', $serviceID )
-			->delete();
+			   ->where( 'serverID', $serverID )
+			   ->where( 'serviceID', $serviceID )
+			   ->delete();
 	}
 
 	sendmessage( 'OnApp account has been terminated', $serviceID );
@@ -217,44 +210,24 @@ function OnAppvCD_TerminateAccount( $params ) {
 }
 
 function OnAppvCD_SuspendAccount( $params ) {
-	$module = new OnAppvCDModule( $params );
-	$lang   = $module->loadLang()->Admin;
-	if( ! file_exists( ONAPP_WRAPPER_INIT ) ) {
-		return $lang->Error_WrapperNotFound . realpath( ROOTDIR ) . '/includes';
-	}
+	$module    = new OnAppvCDModule( $params );
+	$tableName = $module::MODULE_NAME . '_Users';
+	$lang      = $module->loadLang()->Admin;
 
-	$serverID        = $params[ 'serverid' ];
-	$clientID        = $params[ 'clientsdetails' ][ 'userid' ];
-	$serviceID       = $params[ 'serviceid' ];
-	$productSettings = json_decode( $params[ 'configoption24' ] )->$serverID;
+	$serverID  = $params[ 'serverid' ];
+	$clientID  = $params[ 'clientsdetails' ][ 'userid' ];
+	$serviceID = $params[ 'serviceid' ];
 
-	$query = "SELECT
-					`OnAppUserID`
-				FROM
-					`OnAppUsersNG`
-				WHERE
-					serverID = $serverID
-					-- AND client_id = $clientID
-					AND serviceID = $serviceID";
-	// todo use placeholders
-
-	$result = full_query( $query );
-	if( $result ) {
-		$OnAppUserID = mysql_result( $result, 0 );
-	}
+	$OnAppUserID = Capsule::table( $tableName )
+						  ->where( 'serverID', $serverID )
+						  ->where( 'serviceID', $serviceID )
+						  ->pluck( 'OnAppUserID' );
 	if( ! $OnAppUserID ) {
 		return sprintf( $lang->Error_UserNotFound, $clientID, $serverID );
 	}
 
 	$OnAppUser      = $module->getObject( 'User' );
 	$OnAppUser->_id = $OnAppUserID;
-
-	# change billing plan
-	$unset = array( 'time_zone', 'user_group_id', 'locale' );
-	$OnAppUser->unsetFields( $unset );
-	$OnAppUser->_billing_plan_id = $productSettings->BillingPlanSuspended;
-	$OnAppUser->save();
-
 	$OnAppUser->suspend();
 	if( ! is_null( $OnAppUser->error ) ) {
 		$errorMsg = $lang->Error_SuspendUser . ':<br/>';
@@ -269,42 +242,26 @@ function OnAppvCD_SuspendAccount( $params ) {
 }
 
 function OnAppvCD_UnsuspendAccount( $params ) {
-	$module = new OnAppvCDModule( $params );
-	$lang   = $module->loadLang()->Admin;
-	if( ! file_exists( ONAPP_WRAPPER_INIT ) ) {
-		return $lang->Error_WrapperNotFound . realpath( ROOTDIR ) . '/includes';
-	}
+	$module    = new OnAppvCDModule( $params );
+	$tableName = $module::MODULE_NAME . '_Users';
+	$lang      = $module->loadLang()->Admin;
 
-	$serverID        = $params[ 'serverid' ];
-	$clientID        = $params[ 'clientsdetails' ][ 'userid' ];
-	$serviceID       = $params[ 'serviceid' ];
-	$productSettings = json_decode( $params[ 'configoption24' ] )->$serverID;
+	$serverID  = $params[ 'serverid' ];
+	$clientID  = $params[ 'clientsdetails' ][ 'userid' ];
+	$serviceID = $params[ 'serviceid' ];
 
-	$query = "SELECT
-					`OnAppUserID`
-				FROM
-					`OnAppElasticUsers`
-				WHERE
-					serverID = $serverID
-					-- AND client_id = $clientID
-					AND serviceID = $serviceID";
-	// todo use placeholders
-
-	$result = full_query( $query );
-	if( $result ) {
-		$OnAppUserID = mysql_result( $result, 0 );
-	}
+	$OnAppUserID = Capsule::table( $tableName )
+						  ->where( 'serverID', $serverID )
+						  ->where( 'serviceID', $serviceID )
+						  ->pluck( 'OnAppUserID' );
 	if( ! $OnAppUserID ) {
 		return sprintf( $lang->Error_UserNotFound, $clientID, $serverID );
 	}
 
-	//$module = new OnAppvCDModule( $params );
 	$OnAppUser = $module->getObject( 'User' );
 	$unset     = array( 'time_zone', 'user_group_id', 'locale' );
 	$OnAppUser->unsetFields( $unset );
-	$OnAppUser->_id              = $OnAppUserID;
-	$OnAppUser->_billing_plan_id = $productSettings->BillingPlanDefault;
-	$OnAppUser->save();
+	$OnAppUser->_id = $OnAppUserID;
 	$OnAppUser->activate_user();
 
 	if( ! is_null( $OnAppUser->error ) ) {
@@ -391,6 +348,8 @@ function OnAppvCD_AdminLink( $params ) {
 }
 
 function OnAppvCD_AdminServicesTabFields( $params ) {
+	return;
+
 	// todo make complex check
 	$result = select_query(
 		'OnAppElasticUsers',
