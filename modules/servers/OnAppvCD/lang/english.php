@@ -62,6 +62,7 @@ return [
     'Error_TerminateUser' => 'Cannot terminate OnApp user',
     'Error_UnsuspendUser' => 'Cannot unsuspend OnApp user',
     'Error_ChangeBillingPlan' => 'Cannot change billing plan',
+    'Error_LinkUser' => 'Cannot link OnApp user',
     'Error_UserNotFound' => 'Cannot find OnApp user for client #%s on server #%s',
     'PasswordNotSet' => 'Password not set',
   ],
