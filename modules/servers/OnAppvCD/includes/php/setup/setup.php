@@ -12,7 +12,12 @@ $tmpSQLConfig = $CONFIG[ 'SQLErrorReporting' ];
 $CONFIG[ 'SQLErrorReporting' ] = '';
 foreach( $sql as $qry ) {
 	$qry = str_replace( '{moduleName}', OnAppvCDModule::MODULE_NAME, $qry );
-	Capsule::connection()->statement( $qry );
+	try {
+		Capsule::connection()->statement( $qry );
+	}
+	catch( \Exception $e ) {
+		logactivity( 'SQL ERROR: ' . $e->getMessage() );
+	}
 }
 $CONFIG[ 'SQLErrorReporting' ] = $tmpSQLConfig;
 unset( $tmpSQLConfig );

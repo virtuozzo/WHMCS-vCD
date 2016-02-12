@@ -17,7 +17,7 @@ if( file_exists( ONAPP_WRAPPER_INIT ) ) {
 }
 
 class OnAppvCDModule {
-	const MODULE_VERSION = '0.1';
+	const MODULE_VERSION = '0.2';
 	const MODULE_NAME    = 'OnAppvCD';
 
 	private $server;
@@ -190,14 +190,10 @@ class OnAppvCDModule {
 			return false;
 		}
 
-		$sql  = 'SELECT
-					`code`,
-					`rate`
-				FROM
-					`tblcurrencies`
-				WHERE
-					`id` = ' . $params[ 'clientsdetails' ][ 'currency' ];
-		$rate = mysql_fetch_assoc( full_query( $sql ) );
+		$rate = Capsule::table('tblcurrencies')
+			->where('id', $params[ 'clientsdetails' ][ 'currency' ])
+			->select( 'code', 'rate')
+			->first();
 
 		$data  = $data->user_stat;
 		$unset = array(
@@ -211,10 +207,10 @@ class OnAppvCDModule {
 				unset( $data->$key );
 			}
 			else {
-				$data->$key *= $rate[ 'rate' ];
+				$data->$key *= $rate->rate;
 			}
 		}
-		$data->currency_code = $rate[ 'code' ];
+		$data->currency_code = $rate->code;
 
 		return $data;
 	}
@@ -258,7 +254,9 @@ class OnAppvCDModule {
 		}
 	}
 
-	public static function generatePassword() {
-		return substr( str_shuffle( '~!@$%^&*(){}|0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' ), 0, 20 );
+	public static function generatePassword( $length = 20 ) {
+		$password = substr( str_shuffle( '~!@$%^&*(){}|0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' ), 0, $length - 1 );
+		$password .= mt_rand( 0, 9 );
+		return $password;
 	}
 }

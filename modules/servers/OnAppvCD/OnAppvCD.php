@@ -63,12 +63,13 @@ function OnAppvCD_ConfigOptions() {
 		}
 	}
 
-	end:
-	return [
-		'' => [
-			'Description' => $module->buildHTML( $data )
-		]
-	];
+	end: {
+		return [
+			'' => [
+				'Description' => $module->buildHTML( $data ),
+			],
+		];
+	}
 }
 
 function OnAppvCD_CreateAccount( $params ) {
@@ -81,7 +82,7 @@ function OnAppvCD_CreateAccount( $params ) {
 	$clientsDetails  = $params[ 'clientsdetails' ];
 	$serviceID       = $params[ 'serviceid' ];
 	$serverID        = $params[ 'serverid' ];
-	$userName        = $params[ 'username' ] ? $params[ 'username' ] : $clientsDetails[ 'email' ];
+	$userName        = $params[ 'username' ] ?: $clientsDetails[ 'email' ];
 	$password        = OnAppvCDModule::generatePassword();
 	$productSettings = json_decode( $params[ 'configoption24' ] )->$serverID;
 
@@ -114,17 +115,8 @@ function OnAppvCD_CreateAccount( $params ) {
 	$OnAppUser->_time_zone       = $productSettings->TimeZone;
 	$OnAppUser->_user_group_id   = $userGroup;
 	$OnAppUser->_locale          = $productSettings->Locale;
-
-	# trial user
-	$isTrial = false;
-	if( $productSettings->TrialDays > 0 ) {
-		if( $params[ 'status' ] == 'Active' ) {
-			$OnAppUser->_billing_plan_id = $productSettings->BillingPlanTrial;
-			$isTrial                     = true;
-		}
-	}
-
 	$OnAppUser->save();
+
 	if( ! is_null( $OnAppUser->getErrorsAsArray() ) ) {
 		$errorMsg = $lang->Error_CreateUser . ': ';
 		$errorMsg .= $OnAppUser->getErrorsAsString( ', ' );
@@ -146,13 +138,11 @@ function OnAppvCD_CreateAccount( $params ) {
 	# save user link
 	Capsule::table( $module::MODULE_NAME . '_Users' )
 		   ->insert( [
-			   'serviceID'     => $params[ 'serviceid' ],
-			   'WHMCSUserID'   => $params[ 'userid' ],
-			   'OnAppUserID'   => $OnAppUser->_obj->_id,
-			   'serverID'      => $params[ 'serverid' ],
-			   'billingPlanID' => $OnAppUser->_billing_plan_id,
-			   'billingType'   => $productSettings->BillingType,
-			   //'isTrial'       => $isTrial,
+			   'serviceID'   => $params[ 'serviceid' ],
+			   'WHMCSUserID' => $params[ 'userid' ],
+			   'OnAppUserID' => $OnAppUser->_obj->_id,
+			   'serverID'    => $params[ 'serverid' ],
+			   'billingType' => $productSettings->BillingType,
 		   ] );
 
 	# save OnApp login and password
@@ -204,6 +194,7 @@ function OnAppvCD_TerminateAccount( $params ) {
 			   ->delete();
 	}
 
+	// todo rename subject
 	sendmessage( 'OnApp account has been terminated', $serviceID );
 
 	return 'success';
@@ -236,6 +227,7 @@ function OnAppvCD_SuspendAccount( $params ) {
 		return $errorMsg;
 	}
 
+	// todo rename subject
 	sendmessage( 'OnApp account has been suspended', $serviceID );
 
 	return 'success';
@@ -259,7 +251,7 @@ function OnAppvCD_UnsuspendAccount( $params ) {
 	}
 
 	$OnAppUser = $module->getObject( 'User' );
-	$unset     = array( 'time_zone', 'user_group_id', 'locale' );
+	$unset     = [ 'time_zone', 'user_group_id', 'locale' ];
 	$OnAppUser->unsetFields( $unset );
 	$OnAppUser->_id = $OnAppUserID;
 	$OnAppUser->activate_user();
@@ -271,6 +263,7 @@ function OnAppvCD_UnsuspendAccount( $params ) {
 		return $errorMsg;
 	}
 
+	// todo rename subject
 	sendmessage( 'OnApp account has been unsuspended', $serviceID );
 
 	return 'success';
@@ -279,9 +272,6 @@ function OnAppvCD_UnsuspendAccount( $params ) {
 function OnAppvCD_ClientArea( $params = '' ) {
 	if( isset( $_GET[ 'modop' ] ) && ( $_GET[ 'modop' ] == 'custom' ) ) {
 		if( isset( $_GET[ 'a' ] ) ) {
-			echo '<pre>';
-			exit( PHP_EOL . ' die at ' . __LINE__ . ' in ' . __FILE__ );
-
 			$functionName = OnAppvCDModule::MODULE_NAME . '_Custom_' . $_GET[ 'a' ];
 			if( function_exists( $functionName ) ) {
 				$functionName( $params );
@@ -293,11 +283,9 @@ function OnAppvCD_ClientArea( $params = '' ) {
 		}
 	}
 
-	// todo fix lang loading
-	$data       = new stdClass;
-	$module     = new OnAppvCDModule( $params );
-	$data->lang = $module->loadLang()->Client;
-	//$data->lang   = json_decode( OnAppvCDModule::$tmpModuleLang )->Client;
+	$data         = new stdClass;
+	$module       = new OnAppvCDModule( $params );
+	$data->lang   = $module->loadLang()->Client;
 	$data->jsLang = json_encode( $data->lang );
 	$data->params = json_decode( json_encode( $params ) );
 
@@ -317,17 +305,14 @@ function OnAppvCD_ClientArea( $params = '' ) {
 	$crypttext         = mcrypt_encrypt( MCRYPT_RIJNDAEL_256, $key, $tmp, MCRYPT_MODE_ECB, $iv );
 	$_SESSION[ 'utk' ] = [
 		$key . substr( md5( uniqid( rand( 1, 999999 ), true ) ), rand( 0, 26 ), 5 ),
-		base64_encode( base64_encode( $crypttext ) )
+		base64_encode( base64_encode( $crypttext ) ),
 	];
 	$data->token       = md5( uniqid( rand( 1, 999999 ), true ) );
 	$data->serverURL   = $server;
 
-	$result           = select_query(
-		'OnAppElasticUsers',
-		'',
-		[ 'serviceID' => $params[ 'serviceid' ] ]
-	);
-	$data->additional = mysql_fetch_object( $result );
+	$data->additional = Capsule::table( OnAppvCDModule::MODULE_NAME . '_Users' )
+							   ->where( 'serviceID', $params[ 'serviceid' ] )
+							   ->first();
 
 	return $module->buildHTML( $data, 'clientArea.tpl' );
 }
@@ -348,82 +333,70 @@ function OnAppvCD_AdminLink( $params ) {
 }
 
 function OnAppvCD_AdminServicesTabFields( $params ) {
-	return;
+	$data = Capsule::table( OnAppvCDModule::MODULE_NAME . '_Users' )
+				   ->where( 'serviceID', $params[ 'serviceid' ] )
+				   ->first();
 
-	// todo make complex check
-	$result = select_query(
-		'OnAppElasticUsers',
-		'',
-		[ 'serviceID' => $params[ 'serviceid' ] ]
-	);
-	$data   = mysql_fetch_object( $result );
-
-	// todo localize
-	# get data
-	$result       = select_query(
-		'OnAppvCD_Cache',
-		'data',
-		[
-			'itemID' => $params[ 'serverid' ],
-			'type'   => 'serverData'
-		]
-	);
-	$billingPlans = mysql_fetch_object( $result )->data;
-	$billingPlans = json_decode( $billingPlans )->BillingPlans;
-
-	$fields = [ ];
-	$field  = '';
-	foreach( $billingPlans as $id => $name ) {
-		if( $data->billingPlanID == $id ) {
-			$selected = 'selected';
-		}
-		else {
-			$selected = '';
-		}
-		$field .= '<option value="' . $id . '" ' . $selected . '>' . $name . '</option>';
-	}
-	$fields[ 'Billing Plan' ] = '<select name="OnAppElasticUsers[billingPlanID]" class="form-control select-inline">' . $field . '</select>';
-	$fields[ 'Billing Plan' ] .= '<input type="hidden" name="OnAppvCD_Prev" value="' . htmlentities( json_encode( $data ) ) . '">';
-	$fields[ 'OnApp user ID' ] = '<input type="text" value="' . $data->OnAppUserID . '" name="OnAppElasticUsers[OnAppUserID]">';
-	$fields[ 'Billing Type' ]  = ucfirst( $data->billingType );
-	$fields[ 'Trial' ]         = $data->isTrial ? 'Yes' : 'No';
+	$fields[ 'OnApp user ID' ] = '<input type="text" value="' . $data->OnAppUserID . '" name="' . OnAppvCDModule::MODULE_NAME . '[OnAppUserID]">';
+	$fields[ 'OnApp user ID' ] .= '<input type="hidden" name="' . OnAppvCDModule::MODULE_NAME . '_Prev" value="' . htmlentities( json_encode( $data ) ) . '">';
 
 	return $fields;
 }
 
 function OnAppvCD_AdminServicesTabFieldsSave( $params ) {
-	$prev = json_decode( html_entity_decode( $_POST[ 'OnAppUsersNG_Prev' ] ) );
-
-	# check server change
-	if( $prev->serverID != $_POST[ 'server' ] ) {
-		$_POST[ 'OnAppElasticUsers' ][ 'serverID' ] = $_POST[ 'server' ];
-	}
-
-	# check billing plan change
-	if( $prev->billingPlanID != $_POST[ 'billingPlanID' ] ) {
-		$module    = new OnAppvCDModule( $params );
-		$OnAppUser = $module->getObject( 'User' );
-		$unset     = [ 'time_zone', 'user_group_id', 'locale' ];
-		$OnAppUser->unsetFields( $unset );
-		$OnAppUser->_id              = $_POST[ 'OnAppElasticUsers' ][ 'OnAppUserID' ];
-		$OnAppUser->_billing_plan_id = $_POST[ 'OnAppElasticUsers' ][ 'billingPlanID' ];
-		$OnAppUser->save();
+	if( $_POST[ OnAppvCDModule::MODULE_NAME . '_Prev' ] === 'null' ) {
+		$module        = new OnAppvCDModule( $params );
+		$OnAppUser     = $module->getObject( 'User' );
+		$OnAppUser->id = $_POST[ $module::MODULE_NAME ][ 'OnAppUserID' ];
+		$OnAppUser     = $OnAppUser->load();
 
 		if( ! is_null( $OnAppUser->error ) ) {
-			$lang = $module->loadLang()->Admin;
-			unset( $_POST[ 'OnAppElasticUsers' ][ 'billingPlanID' ] );
-			$errorMsg = $lang->Error_ChangeBillingPlan . ":\\n";
+			$lang     = $module->loadLang()->Admin;
+			$errorMsg = $lang->Error_LinkUser . ":\\n";
 			$errorMsg .= $OnAppUser->getErrorsAsString( "\\n" );
 			echo '<script>alert("' . $errorMsg . '");</script><meta http-equiv="refresh" content="0">';
 			exit;
 		}
-	}
+		else {
+			$id    = $OnAppUser->id;
+			$login = $OnAppUser->login;
+		}
 
-	update_query(
-		'OnAppElasticUsers',
-		$_POST[ 'OnAppElasticUsers' ],
-		[ 'id' => $prev->id ]
-	);
+		# save user link
+		Capsule::table( OnAppvCDModule::MODULE_NAME . '_Users' )
+			   ->insert( [
+				   'serviceID'   => $params[ 'serviceid' ],
+				   'WHMCSUserID' => $params[ 'userid' ],
+				   'OnAppUserID' => $id,
+				   'serverID'    => $params[ 'serverid' ],
+				   'billingType' => $params[ 'configoption2' ],
+			   ] );
+
+		$password            = $module::generatePassword();
+		$OnAppUser           = $module->getObject( 'User' );
+		$OnAppUser->id       = $id;
+		$OnAppUser->password = $password;
+		$OnAppUser->save();
+
+		# save OnApp login and password
+		Capsule::table( 'tblhosting' )
+			   ->where( 'id', $params[ 'serviceid' ] )
+			   ->update( [
+				   'password' => encrypt( $password ),
+				   'username' => $login,
+			   ] );
+	}
+	else {
+		$prev = json_decode( html_entity_decode( $_POST[ OnAppvCDModule::MODULE_NAME . '_Prev' ] ) );
+		# check server change
+		if( $prev->serverID != $_POST[ 'server' ] ) {
+			$_POST[ OnAppvCDModule::MODULE_NAME ][ 'serverID' ] = $_POST[ 'server' ];
+		}
+
+		Capsule::table( OnAppvCDModule::MODULE_NAME . '_Users' )
+			   ->where( 'id', $prev->id )
+			   ->update( $_POST[ OnAppvCDModule::MODULE_NAME ] );
+	}
 }
 
 function OnAppvCD_Custom_GeneratePassword( $params ) {
@@ -432,21 +405,15 @@ function OnAppvCD_Custom_GeneratePassword( $params ) {
 	$serverID  = $params[ 'serverid' ];
 	$password  = OnAppvCDModule::generatePassword();
 
-	$query = "SELECT
-					`OnAppUserID`
-				FROM
-					`OnAppElasticUsers`
-				WHERE
-					serverID = '$serverID'
-					AND WHMCSUserID = '$clientID'
-					AND serviceID = '$serviceID'";
-	// todo use placeholders
+	$OnAppUserID = Capsule::table( OnAppvCDModule::MODULE_NAME . '_Users' )
+						  ->where( 'serverID', $serverID )
+						  ->where( 'serviceID', $serviceID )
+						  ->where( 'WHMCSUserID', $clientID )
+						  ->pluck( 'OnAppUserID' );
 
-	$result      = full_query( $query );
-	$OnAppUserID = mysql_result( $result, 0 );
-
-	$module               = new OnAppvCDModule( $params );
-	$OnAppUser            = $module->getObject( 'User' );
+	$module    = new OnAppvCDModule( $params );
+	$OnAppUser = $module->getObject( 'User' );
+	$OnAppUser->logger->setDebug( 1 );
 	$OnAppUser->_id       = $OnAppUserID;
 	$OnAppUser->_password = $password;
 	$OnAppUser->save();
@@ -460,16 +427,12 @@ function OnAppvCD_Custom_GeneratePassword( $params ) {
 		$data->message .= $OnAppUser->getErrorsAsString( '<br/>' );
 	}
 	else {
-		// Save OnApp login and password
-		full_query(
-			"UPDATE
-				tblhosting
-			SET
-				password = '" . encrypt( $password ) . "'
-			WHERE
-				id = '$serviceID'"
-		);
+		# Save OnApp login and password
+		Capsule::table( 'tblhosting' )
+			   ->where( 'id', $serviceID )
+			   ->update( [ 'password' => encrypt( $password ) ] );
 
+		// todo rename subject
 		sendmessage( 'OnApp account password has been generated', $serviceID );
 
 		$data->status  = true;
@@ -478,60 +441,6 @@ function OnAppvCD_Custom_GeneratePassword( $params ) {
 
 	echo json_encode( $data );
 	exit;
-}
-
-function OnAppvCD_Custom_ConvertTrial( $params ) {
-	//echo '<pre style="text-align: left;">';
-	//print_r( $params );
-	//exit( PHP_EOL . ' die at ' . __LINE__ . ' in ' . __FILE__ );
-
-	$result      = select_query(
-		'OnAppElasticUsers',
-		'',
-		[
-			'serviceID'   => $params[ 'serviceid' ],
-			'WHMCSUserID' => $params[ 'userid' ],
-			'serverID'    => $params[ 'serverid' ],
-		]
-	);
-	$OnAppUserID = mysql_fetch_object( $result )->OnAppUserID;
-
-	$module    = new OnAppvCDModule( $params );
-	$OnAppUser = $module->getObject( 'User' );
-	$unset     = [ 'time_zone', 'user_group_id', 'locale' ];
-	$OnAppUser->unsetFields( $unset );
-	$OnAppUser->_id              = $OnAppUserID;
-	$OnAppUser->_billing_plan_id = json_decode( $params[ 'configoption24' ] )->{2};
-	$OnAppUser->save();
-
-	$data = new stdClass;
-	$lang = $module->loadLang()->Client;
-	if( ! is_null( $OnAppUser->error ) ) {
-		$data->status  = false;
-		$data->message = $lang->Error_ConvertTrial . ':<br>';
-		$data->message .= $OnAppUser->getErrorsAsString( '<br>' );
-	}
-	else {
-		$update        = [
-			'isTrial'       => false,
-			'billingPlanID' => $OnAppUser->_billing_plan_id,
-		];
-		$data->status  = true;
-		$data->message = $lang->TrialConverted;
-
-		update_query(
-			'OnAppElasticUsers',
-			$update,
-			[
-				'serviceID'   => $params[ 'serviceid' ],
-				'WHMCSUserID' => $params[ 'userid' ],
-				'serverID'    => $params[ 'serverid' ],
-				'OnAppUserID' => $OnAppUserID,
-			]
-		);
-	}
-
-	exit( json_encode( $data ) );
 }
 
 function OnAppvCD_Custom_OutstandingDetails( $params = '' ) {

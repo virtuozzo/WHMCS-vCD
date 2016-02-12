@@ -14,6 +14,10 @@ CREATE TABLE IF NOT EXISTS `{moduleName}_Users` (
 		ENGINE = InnoDB
 		DEFAULT CHARSET = utf8;
 
+ALTER TABLE `OnAppvCD_Users` DROP `isTrial`;
+
+ALTER TABLE `OnAppvCD_Users` DROP `billingPlanID`;
+
 CREATE TABLE IF NOT EXISTS `{moduleName}_Cache` (
 		`id`     MEDIUMINT(11) UNSIGNED            NOT NULL AUTO_INCREMENT,
 		`itemID` MEDIUMINT(11)                     NOT NULL,
