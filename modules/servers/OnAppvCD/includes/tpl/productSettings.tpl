@@ -202,9 +202,11 @@
 		</tr>
 		<!-- billing plan group -->
 		{if $productOptions.7 == 1}
+			{assign var="groupDisabled" value="disabled"}
 			<input type="hidden" name="{$moduleName}[OrganizationType]" value="2">
 			<tr class="collapse" id="group-bp-row">
 		{else}
+			{assign var="groupDisabled" value=""}
 			<tr id="group-bp-row">
 		{/if}
 			<td class="fieldlabel">
@@ -213,7 +215,7 @@
 				{$lang->$itemName}
 			</td>
 			<td class="fieldarea">
-				<select name="{$moduleName}[GroupBillingPlans][]" multiple required>
+				<select name="{$moduleName}[GroupBillingPlans][]" multiple required {$groupDisabled}>
 					<option value=""></option>
 					{foreach from=$servers->$selectedServer->BillingPlans key=ID item=name}
 						{if in_array($ID, $productSettings->GroupBillingPlans)}
