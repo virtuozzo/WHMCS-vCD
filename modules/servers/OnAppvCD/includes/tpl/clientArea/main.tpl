@@ -86,7 +86,3 @@
 {/if}
 
 <script type="text/javascript" src="modules/servers/{$moduleName}/includes/js/clientArea/main.js"></script>
-
-{*
-<script type="text/javascript" src="modules/servers/{$moduleName}/includes/js/clientArea/main.js"></script>
-*}
