@@ -189,10 +189,12 @@ class OnAppvCDModule {
 			return false;
 		}
 
-		$rate                     = Capsule::table( 'tblcurrencies' )
-										   ->where( 'id', $params[ 'clientsdetails' ][ 'currency' ] )
-										   ->select( 'rate', 'prefix', 'suffix' )
-										   ->first();
+		$rate = Capsule::table( 'tblcurrencies' )
+					   ->where( 'id', $params[ 'clientsdetails' ][ 'currency' ] )
+					   ->select( 'rate', 'prefix', 'suffix' )
+					   ->first();
+
+		$data                     = $data->user_stat;
 		$result                   = new stdClass;
 		$result->cost             = $data->total_cost * $rate->rate;
 		$result->currency         = new stdClass;
@@ -201,7 +203,6 @@ class OnAppvCDModule {
 
 		$module = new OnAppvCDModule( $params );
 		$module = $module->getObject( 'VirtualMachine' );
-		$data   = $data->user_stat;
 		foreach( $data->vm_stats as $vm ) {
 			$tmp           = [
 				'label' => $module->load( $vm->virtual_machine_id )->label,
@@ -218,8 +219,6 @@ class OnAppvCDModule {
 					   ->where( 'serviceID', $params[ 'serviceid' ] )
 					   ->select( 'serverID', 'WHMCSUserID', 'OnAppUserID' )
 					   ->first();
-
-		$user->OnAppUserID = 38; //todo delete
 
 		$serverAddr = $params[ 'serverhttpprefix' ] . '://';
 		$serverAddr .= $params[ 'serverip' ] ?: $params[ 'serverhostname' ];
