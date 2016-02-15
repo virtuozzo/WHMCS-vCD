@@ -12,9 +12,9 @@ $( document ).ready( function() {
 	// ajax
 	$( '#stat_data button' ).on( 'click', function() {
 		$( 'tr#error' ).hide();
-		//$( '#stat_data tbody' ).fadeTo( 'fast', 0.1 );
 		var btn = $( this );
-		btn.button( 'loading' );
+		btn.prop( 'disabled', true );
+		btn.text( btn.data( 'loading' ) );
 
 		$( '#stat_data tbody' ).hide();
 		$.ajax( {
@@ -55,7 +55,8 @@ $( document ).ready( function() {
 				$( '#stat_data tbody' ).show();
 			}
 		} ).always( function() {
-			btn.button( 'reset' );
+			btn.prop( 'disabled', false );
+			btn.text( btn.data( 'normal' ) );
 		} );
 	} );
 } );

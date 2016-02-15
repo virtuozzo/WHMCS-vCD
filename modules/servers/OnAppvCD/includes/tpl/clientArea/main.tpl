@@ -18,14 +18,9 @@
 		<button type="submit" class="btn btn-default">
 			{$lang->OpenCP}
 		</button>
-		<button type="button" class="btn btn-default" data-loading-text="{$lang->Processing}" id="change-password">
+		<button type="button" class="btn btn-default" id="change-password" data-loading="{$lang->Processing}" data-normal="{$lang->GenerateNewPassword}">
 			{$lang->GenerateNewPassword}
 		</button>
-		{if $additional->isTrial}
-			<button type="button" class="btn btn-default" data-loading-text="{$lang->Processing}" id="convert-trial">
-				{$lang->ConvertTrial}
-			</button>
-		{/if}
 	</form>
 </div>
 
@@ -52,8 +47,7 @@
 						</div>
 					</div>
 					<div class="col-md-2 text-left">
-						<button type="button" id="loading-example-btn"
-								data-loading-text="{$lang->Loading}" class="btn btn-default">
+						<button type="button" data-loading="{$lang->Loading}" data-normal="{$lang->Apply}" class="btn btn-default">
 							{$lang->Apply}
 						</button>
 					</div>
@@ -77,6 +71,7 @@
     </tbody>
 </table>
 
+
 <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.9.0/moment-with-locales.js"></script>
 <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datetimepicker/4.14.30/css/bootstrap-datetimepicker.min.css"/>
 <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datetimepicker/4.14.30/js/bootstrap-datetimepicker.min.js"></script>
@@ -84,9 +79,14 @@
 <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/accounting.js/0.3.2/accounting.min.js"></script>
 <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/vue/1.0.16/vue.min.js"></script>
 
-<script type="text/javascript" src="modules/servers/{$moduleName}/includes/js/clientArea/main.js"></script>
 {if $organizationType == 1}
 	<script type="text/javascript" src="modules/servers/{$moduleName}/includes/js/clientArea/single-org.js"></script>
 {else}
 	<script type="text/javascript" src="modules/servers/{$moduleName}/includes/js/clientArea/multi-org.js"></script>
 {/if}
+
+<script type="text/javascript" src="modules/servers/{$moduleName}/includes/js/clientArea/main.js"></script>
+
+{*
+<script type="text/javascript" src="modules/servers/{$moduleName}/includes/js/clientArea/main.js"></script>
+*}

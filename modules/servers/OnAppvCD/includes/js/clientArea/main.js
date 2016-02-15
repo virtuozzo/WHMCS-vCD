@@ -1,14 +1,10 @@
-$( document ).ready( function( ) {
-	// workaround bootstrap.min.js issue
-	$.getScript( '/assets/js/bootstrap.min.js', function() {
-		$( '#stat_data button' ).click();
-	} );
-
+$( document ).ready( function() {
 	// generate new password
 	$( '#change-password' ).on( 'click', function() {
 		$( '#gotocp .alert' ).hide();
 		var btn = $( this );
-		btn.button( 'loading' );
+		btn.prop( 'disabled', true );
+		btn.text( btn.data( 'loading' ) );
 
 		$.ajax( {
 			url: document.location.href,
@@ -37,7 +33,8 @@ $( document ).ready( function( ) {
 				}
 			}
 		} ).always( function() {
-			btn.button( 'reset' );
+			btn.prop( 'disabled', false );
+			btn.text( btn.data( 'normal' ) );
 		} );
 	} );
 
@@ -52,4 +49,7 @@ $( document ).ready( function( ) {
 	$( '#datetimepicker2' ).datetimepicker( opts );
 	$( '#datetimepicker2 input' ).val( moment().format( 'YYYY-MM-DD HH:mm' ) );
 	$( '#datetimepicker1 input' ).val( moment().subtract( 2, 'days' ).format( 'YYYY-MM-DD HH:mm' ) );
+
+	// get stat
+	$( '#stat_data button' ).click();
 } );
