@@ -299,22 +299,22 @@ function OnAppvCD_ClientArea( $params = '' ) {
 	];
 	$tmp = json_encode( $tmp ) . '%%%';
 
-	$iv_size           = mcrypt_get_iv_size( MCRYPT_RIJNDAEL_256, MCRYPT_MODE_ECB );
-	$iv                = mcrypt_create_iv( $iv_size, MCRYPT_RAND );
-	$key               = substr( md5( uniqid( rand( 1, 999999 ), true ) ), 0, 32 );
-	$crypttext         = mcrypt_encrypt( MCRYPT_RIJNDAEL_256, $key, $tmp, MCRYPT_MODE_ECB, $iv );
-	$_SESSION[ 'utk' ] = [
+	$iv_size                = mcrypt_get_iv_size( MCRYPT_RIJNDAEL_256, MCRYPT_MODE_ECB );
+	$iv                     = mcrypt_create_iv( $iv_size, MCRYPT_RAND );
+	$key                    = substr( md5( uniqid( rand( 1, 999999 ), true ) ), 0, 32 );
+	$crypttext              = mcrypt_encrypt( MCRYPT_RIJNDAEL_256, $key, $tmp, MCRYPT_MODE_ECB, $iv );
+	$_SESSION[ 'utk' ]      = [
 		$key . substr( md5( uniqid( rand( 1, 999999 ), true ) ), rand( 0, 26 ), 5 ),
 		base64_encode( base64_encode( $crypttext ) ),
 	];
-	$data->token       = md5( uniqid( rand( 1, 999999 ), true ) );
-	$data->serverURL   = $server;
+	$data->token            = md5( uniqid( rand( 1, 999999 ), true ) );
+	$data->serverURL        = $server;
+	$data->organizationType = $params[ 'configoption7' ];
+	$data->additional       = Capsule::table( OnAppvCDModule::MODULE_NAME . '_Users' )
+									 ->where( 'serviceID', $params[ 'serviceid' ] )
+									 ->first();
 
-	$data->additional = Capsule::table( OnAppvCDModule::MODULE_NAME . '_Users' )
-							   ->where( 'serviceID', $params[ 'serviceid' ] )
-							   ->first();
-
-	return $module->buildHTML( $data, 'clientArea.tpl' );
+	return $module->buildHTML( $data, 'clientArea/main.tpl' );
 }
 
 function OnAppvCD_AdminLink( $params ) {
@@ -444,6 +444,18 @@ function OnAppvCD_Custom_GeneratePassword( $params ) {
 }
 
 function OnAppvCD_Custom_OutstandingDetails( $params = '' ) {
-	$data = json_encode( OnAppvCDModule::getAmount( $params ) );
-	exit( $data );
+	//header('HTTP/1.1 404');exit;
+	//header( 'Content-Type: application/json; charset=utf-8' );
+	//$data = '{"cost":' . rand( 0, 99 ) . ',"currency":{"prefix":"\u20b4","suffix":"UAH"},"vms":[{"label":"CentOS-6.5","cost":' . rand( 0, 99 ) . '},{"label":"test1","cost":' . rand( 0, 99 ) . '}]}';
+	//exit($data);
+
+	$data = OnAppvCDModule::getAmount( $params );
+	if( $data ) {
+		header( 'Content-Type: application/json; charset=utf-8' );
+		echo json_encode( $data );
+	}
+	else {
+		header( 'HTTP/1.1 404 No Data Found' );
+	}
+	exit;
 }

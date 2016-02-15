@@ -19,7 +19,6 @@ if( file_exists( ONAPP_WRAPPER_INIT ) ) {
 class OnAppvCDModule {
 	const MODULE_VERSION = '0.2';
 	const MODULE_NAME    = 'OnAppvCD';
-
 	private $server;
 
 	public function __construct( $params = null ) {
@@ -68,6 +67,7 @@ class OnAppvCDModule {
 
 	public function BillingCompanyPlans() {
 		$data = $this->getObject( 'BillingCompany' )->getList();
+
 		return $this->buildArray( $data );
 	}
 
@@ -85,6 +85,7 @@ class OnAppvCDModule {
 
 	public function getHyperVisors() {
 		$data = $this->getObject( 'Hypervisor' )->getList();
+
 		return $this->buildArray( $data );
 	}
 
@@ -94,8 +95,7 @@ class OnAppvCDModule {
 							->where( 'type', 'serverData' )
 							->where( 'itemID', $this->server->ID )
 							->select( 'data' )
-							->first()
-		;
+							->first();
 
 		if( empty( $data ) ) {
 			# get data from OnApp CP
@@ -125,7 +125,7 @@ class OnAppvCDModule {
 
 	public function getObject( $class ) {
 		$className = 'OnApp_' . $class;
-		$obj   = new $className;
+		$obj       = new $className;
 		$obj->auth( $this->server->address, $this->server->user, $this->server->pass );
 
 		return $obj;
@@ -179,51 +179,50 @@ class OnAppvCDModule {
 			$dateFrom = $_GET[ 'start' ];
 			$dateTill = $_GET[ 'end' ];
 		}
-		$date = array(
+		$date = [
 			'period[startdate]' => $dateFrom,
 			'period[enddate]'   => $dateTill,
-		);
+		];
 
 		$data = self::getResourcesData( $params, $date );
-
 		if( ! $data ) {
 			return false;
 		}
 
-		$rate = Capsule::table('tblcurrencies')
-			->where('id', $params[ 'clientsdetails' ][ 'currency' ])
-			->select( 'code', 'rate')
-			->first();
+		$rate                     = Capsule::table( 'tblcurrencies' )
+										   ->where( 'id', $params[ 'clientsdetails' ][ 'currency' ] )
+										   ->select( 'rate', 'prefix', 'suffix' )
+										   ->first();
+		$result                   = new stdClass;
+		$result->cost             = $data->total_cost * $rate->rate;
+		$result->currency         = new stdClass;
+		$result->currency->prefix = $rate->prefix;
+		$result->currency->suffix = $rate->suffix;
 
-		$data  = $data->user_stat;
-		$unset = array(
-			'vm_stats',
-			'stat_time',
-			'user_resources_cost',
-			'user_id',
-		);
-		foreach( $data as $key => &$value ) {
-			if( in_array( $key, $unset ) ) {
-				unset( $data->$key );
-			}
-			else {
-				$data->$key *= $rate->rate;
-			}
+		$module = new OnAppvCDModule( $params );
+		$module = $module->getObject( 'VirtualMachine' );
+		$data   = $data->user_stat;
+		foreach( $data->vm_stats as $vm ) {
+			$tmp           = [
+				'label' => $module->load( $vm->virtual_machine_id )->label,
+				'cost'  => $vm->total_cost * $rate->rate,
+			];
+			$result->vms[] = $tmp;
 		}
-		$data->currency_code = $rate->code;
 
-		return $data;
+		return $result;
 	}
 
 	private static function getResourcesData( $params, $date ) {
 		$user = Capsule::table( OnAppvCDModule::MODULE_NAME . '_Users' )
 					   ->where( 'serviceID', $params[ 'serviceid' ] )
 					   ->select( 'serverID', 'WHMCSUserID', 'OnAppUserID' )
-					   ->first()
-		;
+					   ->first();
+
+		$user->OnAppUserID = 38; //todo delete
 
 		$serverAddr = $params[ 'serverhttpprefix' ] . '://';
-		$serverAddr .= ! empty( $params[ 'serverip' ] ) ? $params[ 'serverip' ] : $params[ 'serverhostname' ];
+		$serverAddr .= $params[ 'serverip' ] ?: $params[ 'serverhostname' ];
 
 		$date = http_build_query( $date );
 		$url  = $serverAddr . '/users/' . $user->OnAppUserID . '/user_statistics.json?' . $date;
@@ -242,7 +241,7 @@ class OnAppvCDModule {
 
 		$curl = new CURL();
 		$curl->addOption( CURLOPT_USERPWD, $user . ':' . $password );
-		$curl->addOption( CURLOPT_HTTPHEADER, array( 'Accept: application/json', 'Content-type: application/json' ) );
+		$curl->addOption( CURLOPT_HTTPHEADER, [ 'Accept: application/json', 'Content-type: application/json' ] );
 		$curl->addOption( CURLOPT_HEADER, true );
 		$data = $curl->get( $url );
 
@@ -257,6 +256,7 @@ class OnAppvCDModule {
 	public static function generatePassword( $length = 20 ) {
 		$password = substr( str_shuffle( '~!@$%^&*(){}|0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' ), 0, $length - 1 );
 		$password .= mt_rand( 0, 9 );
+
 		return $password;
 	}
 }

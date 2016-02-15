@@ -66,62 +66,27 @@
             </th>
         </tr>
     </thead>
-    <tbody>
-        <tr>
-            <td class="span4">{$lang->VMCost}</td>
-            <td id="vm_cost"></td>
-        </tr>
-        <tr>
-            <td>{$lang->BackupsCost}</td>
-            <td id="backup_cost"></td>
-        </tr>
-        <tr>
-            <td>{$lang->MonitCost}</td>
-            <td id="monit_cost"></td>
-        </tr>
-        <tr>
-            <td>{$lang->StorageCost}</td>
-            <td id="storage_disk_size_cost"></td>
-        </tr>
-        <tr>
-            <td>{$lang->TemplatesCost}</td>
-            <td id="template_cost"></td>
-        </tr>
-        <tr>
-            <td>{$lang->BackupCountCost}</td>
-            <td id="backup_count_cost"></td>
-        </tr>
-        <tr>
-            <td>{$lang->BackupDiskCost}</td>
-            <td id="backup_disk_size_cost"></td>
-        </tr>
-        <tr>
-            <td>{$lang->TemplateCountCost}</td>
-            <td id="template_count_cost"></td>
-        </tr>
-        <tr>
-            <td>{$lang->TemplateDiskSizeCost}</td>
-            <td id="template_disk_size_cost"></td>
-        </tr>
-        <tr>
-            <td>{$lang->CustomerNetworkCost}</td>
-            <td id="customer_network_cost"></td>
-        </tr>
-        <tr>
-            <td>{$lang->EdgeGroupCost}</td>
-            <td id="edge_group_cost"></td>
-        </tr>
-        <tr>
-            <td>{$lang->TotalCost}</td>
-            <td id="total_cost"></td>
-        </tr>
+    <tbody id="app" class="text-left collapse">
+		<!-- vue template -->
+		{if $organizationType == 1}
+			{include 'clientArea/single-org.tpl'}
+		{else}
+			{include 'clientArea/multiple-org.tpl'}
+		{/if}
+		<!-- vue template -->
     </tbody>
 </table>
 
 <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.9.0/moment-with-locales.js"></script>
-
 <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datetimepicker/4.14.30/css/bootstrap-datetimepicker.min.css"/>
 <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datetimepicker/4.14.30/js/bootstrap-datetimepicker.min.js"></script>
 
 <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/accounting.js/0.3.2/accounting.min.js"></script>
-<script type="text/javascript" src="modules/servers/{$moduleName}/includes/js/clientArea.js"></script>
+<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/vue/1.0.16/vue.min.js"></script>
+
+<script type="text/javascript" src="modules/servers/{$moduleName}/includes/js/clientArea/main.js"></script>
+{if $organizationType == 1}
+	<script type="text/javascript" src="modules/servers/{$moduleName}/includes/js/clientArea/single-org.js"></script>
+{else}
+	<script type="text/javascript" src="modules/servers/{$moduleName}/includes/js/clientArea/multi-org.js"></script>
+{/if}
