@@ -48,12 +48,9 @@ $( document ).ready( function() {
 	$( '#datetimepicker2 input' ).val( moment().format( 'YYYY-MM-DD HH:mm' ) );
 	$( '#datetimepicker1 input' ).val( moment().subtract( 2, 'days' ).format( 'YYYY-MM-DD HH:mm' ) );
 
-	// show password handler
-	$( '#showPassword' ).click( function() {
-		var next = $( '#showPassword' ).next();
-		next.toggle();
-		this.blur();
-		OnAppModule_toggleButton( $( this ), next.is( ':visible' ) ? 'process' : 'reset', false );
+	// password handler
+	$( '.preview-password' ).prevue( {
+		offsetX: $( '.preview-password' ).width() + 5
 	} );
 
 	// get stat

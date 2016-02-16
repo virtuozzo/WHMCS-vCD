@@ -39,3 +39,11 @@
 .module-client-area button {
 	outline: none !important;
 }
+
+.preview-password {
+	padding-left: 25px;
+	width: 100%;
+	border: none;
+	background-color: transparent;
+	outline: none !important;
+}

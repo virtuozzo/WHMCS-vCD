@@ -19,10 +19,7 @@
 		<tr>
 			<td>{$lang->Password}</td>
 			<td>
-				<button id="showPassword" data-process="{$lang->Hide}" class="btn btn-default btn-xs">
-					{$lang->Show}
-				</button>&nbsp;&nbsp;
-				<span class="collapse">{$params->password}</span>
+				<input type="password" class="preview-password" value="{$params->password}">
 			</td>
 		</tr>
 	</table>
@@ -96,12 +93,15 @@
 <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datetimepicker/4.14.30/css/bootstrap-datetimepicker.min.css"/>
 <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datetimepicker/4.14.30/js/bootstrap-datetimepicker.min.js"></script>
 
+<link rel="stylesheet" href="//cdn.rawgit.com/jaunesarmiento/prevue.js/master/src/css/font-awesome-eyes.css"/>
+<script type="text/javascript" src="//cdn.rawgit.com/jaunesarmiento/prevue.js/master/src/js/jquery.prevue.min.js"></script>
+
 <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/accounting.js/0.3.2/accounting.min.js"></script>
 <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/vue/1.0.16/vue.min.js"></script>
 
-<script type="text/javascript" src="modules/servers/{$moduleName}/includes/js/clientArea/main.js"></script>
 {if $organizationType == 1}
 	<script type="text/javascript" src="modules/servers/{$moduleName}/includes/js/clientArea/single-org.js"></script>
 {else}
 	<script type="text/javascript" src="modules/servers/{$moduleName}/includes/js/clientArea/multi-org.js"></script>
 {/if}
+<script type="text/javascript" src="modules/servers/{$moduleName}/includes/js/clientArea/main.js"></script>

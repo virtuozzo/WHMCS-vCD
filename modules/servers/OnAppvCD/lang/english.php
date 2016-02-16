@@ -70,8 +70,6 @@ return [
 		'CPURL'                => 'control panel URL',
 		'UserName'             => 'username',
 		'Password'             => 'password',
-		'Show'                 => 'show',
-		'Hide'                 => 'hide',
 		'GenerateNewPassword'  => 'Generate new service password',
 		'GeneralIssue'         => 'Something went wrong',
 		'ManageMyCloud'        => 'Manage My Cloud',
