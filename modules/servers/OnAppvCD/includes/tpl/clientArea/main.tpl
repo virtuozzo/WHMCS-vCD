@@ -7,10 +7,25 @@
 <div id="gotocp">
 	<h3 class="aleft1">{$lang->ManageMyCloud}</h3>
 
-	<div class="alert">
-		<a href="#" class="close" aria-label="close" onclick="$('.alert').hide('fast');return false;">&times;</a>
-		<span></span>
-	</div>
+	<table class="table table-striped table-condensed">
+		<tr>
+			<td class="col-md-3">{$lang->CPURL}</td>
+			<td><a href="{$serverURL}" target="_blank">{$serverURL}</a></td>
+		</tr>
+		<tr>
+			<td>{$lang->UserName}</td>
+			<td>{$params->username}</td>
+		</tr>
+		<tr>
+			<td>{$lang->Password}</td>
+			<td>
+				<button id="showPassword" data-process="{$lang->Hide}" class="btn btn-default btn-xs">
+					{$lang->Show}
+				</button>&nbsp;&nbsp;
+				<span class="collapse">{$params->password}</span>
+			</td>
+		</tr>
+	</table>
 
 	<form action="modules/servers/{$moduleName}/includes/php/getCP.php" method="post" id="gotocpform" autocomplete="off"
 		  target="_blank">
@@ -18,10 +33,15 @@
 		<button type="submit" class="btn btn-default">
 			{$lang->OpenCP}
 		</button>
-		<button type="button" class="btn btn-default" id="change-password" data-loading="{$lang->Processing}" data-normal="{$lang->GenerateNewPassword}">
+		<button type="button" class="btn btn-default" id="change-password" data-process="{$lang->Processing}">
 			{$lang->GenerateNewPassword}
 		</button>
 	</form>
+
+	<div class="alert">
+		<a href="#" class="close" aria-label="close" onclick="$('.alert').hide('fast');return false;">&times;</a>
+		<span></span>
+	</div>
 </div>
 
 <h3 id="user-stat">{$lang->OutstandingDetails}</h3>
@@ -47,7 +67,7 @@
 						</div>
 					</div>
 					<div class="col-md-2 text-left">
-						<button type="button" data-loading="{$lang->Loading}" data-normal="{$lang->Apply}" class="btn btn-default">
+						<button type="button" data-process="{$lang->Loading}" class="btn btn-default">
 							{$lang->Apply}
 						</button>
 					</div>
@@ -79,10 +99,9 @@
 <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/accounting.js/0.3.2/accounting.min.js"></script>
 <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/vue/1.0.16/vue.min.js"></script>
 
+<script type="text/javascript" src="modules/servers/{$moduleName}/includes/js/clientArea/main.js"></script>
 {if $organizationType == 1}
 	<script type="text/javascript" src="modules/servers/{$moduleName}/includes/js/clientArea/single-org.js"></script>
 {else}
 	<script type="text/javascript" src="modules/servers/{$moduleName}/includes/js/clientArea/multi-org.js"></script>
 {/if}
-
-<script type="text/javascript" src="modules/servers/{$moduleName}/includes/js/clientArea/main.js"></script>

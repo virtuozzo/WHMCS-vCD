@@ -13,8 +13,7 @@ $( document ).ready( function() {
 	$( '#stat_data button' ).on( 'click', function() {
 		$( 'tr#error' ).hide();
 		var btn = $( this );
-		btn.prop( 'disabled', true );
-		btn.text( btn.data( 'loading' ) );
+		OnAppModule_toggleButton( btn, 'process', true );
 
 		$( '#stat_data tbody' ).hide();
 		$.ajax( {
@@ -55,8 +54,7 @@ $( document ).ready( function() {
 				$( '#stat_data tbody' ).show();
 			}
 		} ).always( function() {
-			btn.prop( 'disabled', false );
-			btn.text( btn.data( 'normal' ) );
+			OnAppModule_toggleButton( btn, 'reset', true );
 		} );
 	} );
 } );

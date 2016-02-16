@@ -28,6 +28,14 @@
 	display: none;
 }
 
+#gotocpform {
+    margin-top: -15px;
+}
+
 #gotocpform button {
     margin: 5px 2px 20px;
+}
+
+.module-client-area button {
+	outline: none !important;
 }

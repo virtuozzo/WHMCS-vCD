@@ -3,16 +3,15 @@ $( document ).ready( function() {
 	$( '#change-password' ).on( 'click', function() {
 		$( '#gotocp .alert' ).hide();
 		var btn = $( this );
-		btn.prop( 'disabled', true );
-		btn.text( btn.data( 'loading' ) );
+		OnAppModule_toggleButton( btn, 'process', true );
 
 		$.ajax( {
-			url: document.location.href,
-			data: {
+			url:     document.location.href,
+			data:    {
 				modop: 'custom',
-				a: 'GeneratePassword'
+				a:     'GeneratePassword'
 			},
-			error: function() {
+			error:   function() {
 				$( '#gotocp .alert span' ).html( LANG.GeneralIssue );
 				var alert = $( '#gotocp .alert' );
 				alert.removeClass().addClass( 'alert alert-danger' ).show( 'fast' );
@@ -33,23 +32,43 @@ $( document ).ready( function() {
 				}
 			}
 		} ).always( function() {
-			btn.prop( 'disabled', false );
-			btn.text( btn.data( 'normal' ) );
+			OnAppModule_toggleButton( btn, 'reset', true );
 		} );
 	} );
 
 	// datetime picker
 	var opts = {
-		format: 'YYYY-MM-DD HH:mm',
+		format:           'YYYY-MM-DD HH:mm',
 		allowInputToggle: true,
-		maxDate: 'now',
-		collapse: true
+		maxDate:          'now',
+		collapse:         true
 	};
 	$( '#datetimepicker1' ).datetimepicker( opts );
 	$( '#datetimepicker2' ).datetimepicker( opts );
 	$( '#datetimepicker2 input' ).val( moment().format( 'YYYY-MM-DD HH:mm' ) );
 	$( '#datetimepicker1 input' ).val( moment().subtract( 2, 'days' ).format( 'YYYY-MM-DD HH:mm' ) );
 
+	// show password handler
+	$( '#showPassword' ).click( function() {
+		var next = $( '#showPassword' ).next();
+		next.toggle();
+		this.blur();
+		OnAppModule_toggleButton( $( this ), next.is( ':visible' ) ? 'process' : 'reset', false );
+	} );
+
 	// get stat
 	$( '#stat_data button' ).click();
 } );
+
+function OnAppModule_toggleButton( btn, mode, disable ) {
+	if( !btn.data( 'reset' ) ) {
+		btn.data( 'reset', btn.text() );
+	}
+	if( disable ) {
+		btn.prop( 'disabled', function( _, val ) {
+			return !val;
+		} );
+	}
+
+	btn.text( btn.data( mode ) );
+}
