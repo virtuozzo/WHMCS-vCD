@@ -443,12 +443,8 @@ function OnAppvCD_Custom_GeneratePassword( $params ) {
 }
 
 function OnAppvCD_Custom_OutstandingDetails( $params = '' ) {
-	//header('HTTP/1.1 404');exit;
-	//header( 'Content-Type: application/json; charset=utf-8' );
-	//$data = '{"cost":' . rand( 0, 99 ) . ',"currency":{"prefix":"\u20b4","suffix":"UAH"},"vms":[{"label":"CentOS-6.5","cost":' . rand( 0, 99 ) . '},{"label":"test1","cost":' . rand( 0, 99 ) . '}]}';
-	//exit($data);
-
-	$data = OnAppvCDModule::getAmount( $params );
+	$module = new OnAppvCDModule;
+	$data = $module->getAmount( $params );
 	if( $data ) {
 		header( 'Content-Type: application/json; charset=utf-8' );
 		echo json_encode( $data );

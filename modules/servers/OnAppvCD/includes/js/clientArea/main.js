@@ -53,6 +53,41 @@ $( document ).ready( function() {
 		offsetX: $( '.preview-password' ).width() + 5
 	} );
 
+	// getting stat handler
+	$( '#stat_data button' ).on( 'click', function() {
+		$( 'tr#error' ).hide();
+		var btn = $( this );
+		OnAppModule_toggleButton( btn, 'process', true );
+
+		//$( '#stat_data tbody' ).hide('fast');
+		$( '#app' ).addClass( 'app-hidden' );
+		$.ajax( {
+			url:     document.location.href,
+			data:    {
+				getstat:   1,
+				modop:     'custom',
+				a:         'OutstandingDetails',
+				start:     $( '#datetimepicker1 input' ).val(),
+				end:       $( '#datetimepicker2 input' ).val(),
+				tz_offset: function() {
+					var myDate = new Date();
+					offset = myDate.getTimezoneOffset();
+					return offset;
+				}
+			},
+			error:   function() {
+				$( '#stat_data tbody' ).addClass( 'app-hidden' );
+				$( 'tr#error' ).show();
+			},
+			success: function( data ) {
+				OnAppModule_render( data );
+				$( '#app' ).toggleClass( 'app-hidden' );
+			}
+		} ).always( function() {
+			OnAppModule_toggleButton( btn, 'reset', true );
+		} );
+	} );
+
 	// get stat
 	$( '#stat_data button' ).click();
 } );

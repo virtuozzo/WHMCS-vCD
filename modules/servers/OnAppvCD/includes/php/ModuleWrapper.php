@@ -20,6 +20,7 @@ class OnAppvCDModule {
 	const MODULE_VERSION = '0.2';
 	const MODULE_NAME    = 'OnAppvCD';
 	private $server;
+	private $moneyFormat;
 
 	public function __construct( $params = null ) {
 		if( $params != null ) {
@@ -170,7 +171,7 @@ class OnAppvCDModule {
 		return json_decode( json_encode( require $languageFile ) );
 	}
 
-	public static function getAmount( array $params ) {
+	public function getAmount( array $params ) {
 		if( $_GET[ 'tz_offset' ] != 0 ) {
 			$dateFrom = date( 'Y-m-d H:i', strtotime( $_GET[ 'start' ] ) + ( $_GET[ 'tz_offset' ] * 60 ) );
 			$dateTill = date( 'Y-m-d H:i', strtotime( $_GET[ 'end' ] ) + ( $_GET[ 'tz_offset' ] * 60 ) );
@@ -183,32 +184,63 @@ class OnAppvCDModule {
 			'period[startdate]' => $dateFrom,
 			'period[enddate]'   => $dateTill,
 		];
-
-		$data = self::getResourcesData( $params, $date );
-		if( ! $data ) {
-			return false;
-		}
-
 		$rate = Capsule::table( 'tblcurrencies' )
 					   ->where( 'id', $params[ 'clientsdetails' ][ 'currency' ] )
 					   ->select( 'rate', 'prefix', 'suffix' )
 					   ->first();
 
-		$data                     = $data->user_stat;
-		$result                   = new stdClass;
-		$result->cost             = $data->total_cost * $rate->rate;
-		$result->currency         = new stdClass;
-		$result->currency->prefix = $rate->prefix;
-		$result->currency->suffix = $rate->suffix;
+		$result                    = new stdClass;
+		$this->moneyFormat         = $this->loadLang()->Money;
+		$this->moneyFormat->Symbol = $rate->{$this->moneyFormat->Symbol};
 
-		$module = new OnAppvCDModule( $params );
-		$module = $module->getObject( 'VirtualMachine' );
-		foreach( $data->vm_stats as $vm ) {
-			$tmp           = [
-				'label' => $module->load( $vm->virtual_machine_id )->label,
-				'cost'  => $vm->total_cost * $rate->rate,
+		if( $params[ 'configoption7' ] == 1 ) {
+			# single org
+			$data = self::getResourcesData( $params, $date );
+			if( ! $data ) {
+				return false;
+			}
+
+			$data         = $data->user_stat;
+			$result->cost = $this->formatAmount( $data->total_cost * $rate->rate );
+
+			$module = new self( $params );
+			$module = $module->getObject( 'VirtualMachine' );
+			foreach( $data->vm_stats as $vm ) {
+				$tmp           = [
+					'label' => $module->load( $vm->virtual_machine_id )->label,
+					'cost'  => $this->formatAmount( $vm->total_cost * $rate->rate ),
+				];
+				$result->vms[] = $tmp;
+			}
+		}
+		else {
+			# multiple orgs
+
+			$tmp    = [
+				'configoption1'    => $params[ 'configoption1' ],
+				'serverusername'   => $params[ 'username' ],
+				'serverpassword'   => $params[ 'password' ],
+				'serverhttpprefix' => $params[ 'serverhttpprefix' ],
+				'serverip'         => $params[ 'serverip' ],
+				'serverhostname'   => $params[ 'serverhostname' ],
 			];
-			$result->vms[] = $tmp;
+			$module = new self( $tmp );
+			$vdcs   = $module->getObject( 'VDCS' )->getList();
+
+			$result->cost = 0;
+			foreach( $vdcs as $vdc ) {
+				$tmp   = 0;
+				$stats = $module->getObject( 'VDCS_Statistics' )->getList( $vdc->id, $date );
+				foreach( $stats as $stat ) {
+					$tmp += $stat->cost;
+				}
+				$result->cost += $tmp;
+				$result->pools[] = [
+					'label' => $vdc->label,
+					'cost'  => $this->formatAmount( $tmp * $rate->rate ),
+				];
+			}
+			$result->cost = $this->formatAmount( $result->cost * $rate->rate );
 		}
 
 		return $result;
@@ -250,6 +282,22 @@ class OnAppvCDModule {
 		else {
 			return $data;
 		}
+	}
+
+	private function formatAmount( $amount ) {
+		$f    = $this->moneyFormat;
+		$data = [
+			'amount' => number_format( $amount, $f->Precision, $f->DecimalPoint, $f->ThousandsSeparator ),
+			'symbol' => $f->Symbol,
+		];
+
+		return preg_replace_callback(
+			'/{(\w+)}/',
+			function( $matches ) use ( $data ) {
+				return $data[ $matches[ 1 ] ];
+			},
+			$f->Format
+		);
 	}
 
 	public static function generatePassword( $length = 20 ) {

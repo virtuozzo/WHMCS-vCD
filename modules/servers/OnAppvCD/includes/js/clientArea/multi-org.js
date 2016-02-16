@@ -2,7 +2,7 @@
 var OnAppvCDApp = new Vue( {
 	el:   '#app',
 	data: {
-		vms:      [],
+		pools:      [],
 		cost:     '',
 	}
 } );

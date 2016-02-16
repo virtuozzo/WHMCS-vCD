@@ -98,9 +98,13 @@ return [
 		'CustomerNetworkCost'  => 'Customer Network Cost',
 		'EdgeGroupCost'        => 'CDN Edge Group Cost',
 		'TotalCost'            => 'Total Cost',
-		'MoneyFormat'          => '%s%v',
-		'MoneySymbol'          => 'prefix',
-		'MoneyPrecision'       => 2,
+	],
+	'Money'   => [
+		'Format'             => '{symbol}{amount}',
+		'Symbol'             => 'prefix',
+		'Precision'          => 2,
+		'DecimalPoint'       => ',',
+		'ThousandsSeparator' => ' ',
 	],
 	'Invoice' => [
 		'DateFormat'              => 'Y-m-d H:i',
