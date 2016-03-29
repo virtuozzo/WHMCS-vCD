@@ -115,6 +115,7 @@ function OnAppvCD_CreateAccount( $params ) {
 	$OnAppUser->_time_zone       = $productSettings->TimeZone;
 	$OnAppUser->_user_group_id   = $userGroup;
 	$OnAppUser->_locale          = $productSettings->Locale;
+
 	$OnAppUser->save();
 
 	if( ! is_null( $OnAppUser->getErrorsAsArray() ) ) {

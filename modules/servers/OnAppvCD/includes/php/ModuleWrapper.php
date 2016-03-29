@@ -17,7 +17,7 @@ if( file_exists( ONAPP_WRAPPER_INIT ) ) {
 }
 
 class OnAppvCDModule {
-	const MODULE_VERSION = '0.2';
+	const MODULE_VERSION = '0.3';
 	const MODULE_NAME    = 'OnAppvCD';
 	private $server;
 	private $moneyFormat;

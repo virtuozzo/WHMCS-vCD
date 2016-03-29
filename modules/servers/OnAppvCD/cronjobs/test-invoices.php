@@ -2,7 +2,7 @@
 
 require __DIR__ . '/common.php';
 
-class OnAppElasticUsers_Cron_Invoices_Test extends OnAppElasticUsers_Cron {
+class OnAppvCD_Cron_Invoices_Test extends OnAppvCD_Cron {
 	const TYPE = 'test';
 
 	protected function run() {
@@ -13,7 +13,6 @@ class OnAppElasticUsers_Cron_Invoices_Test extends OnAppElasticUsers_Cron {
 		//calculate invoice due date
 		$this->dueDate = date( 'Ymd' );
 		$tab = "\n\t\t\t";
-
 		while( $client = mysql_fetch_assoc( $this->clients ) ) {
 			if( $client[ 'billingType' ] != 'postpaid' ) {
 				continue;
@@ -47,8 +46,9 @@ class OnAppElasticUsers_Cron_Invoices_Test extends OnAppElasticUsers_Cron {
 
 				$this->log[ ] = $tmp;
 				$this->log[ ] = '========== SPLIT =============';
+
 			}
 		}
 	}
 }
-new OnAppElasticUsers_Cron_Invoices_Test;
+new OnAppvCD_Cron_Invoices_Test;

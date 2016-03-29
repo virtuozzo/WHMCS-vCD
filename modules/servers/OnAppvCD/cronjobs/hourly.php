@@ -2,7 +2,7 @@
 
 require __DIR__ . '/common.php';
 
-class OnAppElasticUsers_Cron_Hourly extends OnAppElasticUsers_Cron {
+class OnAppvCD_Cron_Hourly extends OnAppvCD_Cron {
 	const TYPE = 'hourly';
 
 	protected function run() {
@@ -25,7 +25,7 @@ class OnAppElasticUsers_Cron_Hourly extends OnAppElasticUsers_Cron {
 				$qry = 'SELECT
 							`Date`
 						FROM
-							`OnAppElasticUsers_Hourly_LastCheck`
+							`OnAppvCD_Hourly_LastCheck`
 						WHERE
 							`WHMCSUserID` = :WHMCSUserID
 							AND `serverID` = :serverID
@@ -80,7 +80,7 @@ class OnAppElasticUsers_Cron_Hourly extends OnAppElasticUsers_Cron {
 			}
 
 			$qry = 'INSERT INTO
-							`OnAppElasticUsers_Hourly_Cost` (
+							`OnAppvCD_Hourly_Stat` (
 							 	`serverID`,
 							 	`WHMCSUserID`,
 							 	`OnAppUserID`,
@@ -173,7 +173,7 @@ class OnAppElasticUsers_Cron_Hourly extends OnAppElasticUsers_Cron {
 
 	private function saveLastCheckDate( $client, $date ) {
 		$qry = 'INSERT INTO
-					`OnAppElasticUsers_Hourly_LastCheck`
+					`OnAppvCD_Hourly_LastCheck`
 				VALUES
 					(
 						:serverID,
@@ -190,4 +190,4 @@ class OnAppElasticUsers_Cron_Hourly extends OnAppElasticUsers_Cron {
 		full_query( $qry );
 	}
 }
-new OnAppElasticUsers_Cron_Hourly;
+new OnAppvCD_Cron_Hourly;

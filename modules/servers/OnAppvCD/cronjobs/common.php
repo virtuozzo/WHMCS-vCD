@@ -1,6 +1,6 @@
 <?php
 
-abstract class OnAppElasticUsers_Cron {
+abstract class OnAppvCD_Cron {
 	protected $root;
 	protected $clients;
 	protected $fromDate;
@@ -10,7 +10,7 @@ abstract class OnAppElasticUsers_Cron {
 	protected $timeZoneOffset;
 	protected $dueDate;
 	protected $cliOptions;
-	protected $logEnabled   = false;
+	protected $logEnabled   = true;
 	protected $printEnabled = false;
 	protected $servers      = array();
 	protected $log          = array();
@@ -19,7 +19,7 @@ abstract class OnAppElasticUsers_Cron {
 
 	public function __construct() {
 		$this->checkCLIMode();
-		$this->root = realpath( dirname( dirname( dirname( dirname( dirname( $_SERVER[ 'argv' ][ 0 ] ) ) ) ) ) ) . DIRECTORY_SEPARATOR;
+		$this->root = realpath( dirname( dirname( dirname( dirname( dirname( __FILE__ ) ) ) ) ) ) . DIRECTORY_SEPARATOR;
 
 		$this->getRequiredFiles();
 		$this->setCLIoptions();
@@ -131,30 +131,29 @@ abstract class OnAppElasticUsers_Cron {
 					tblhosting.paymentmethod,
 					tblhosting.domain,
 					tblhosting.id AS service_id,
-					`OnAppElasticUsers`.`serverID`,
-					`OnAppElasticUsers`.`WHMCSUserID`,
-					`OnAppElasticUsers`.`OnAppUserID`,
-					`OnAppElasticUsers`.`billingType`,
+					`OnAppvCD_Users`.`serverID`,
+					`OnAppvCD_Users`.`WHMCSUserID`,
+					`OnAppvCD_Users`.`OnAppUserID`,
+					`OnAppvCD_Users`.`billingType`,
 					tblproducts.tax,
 					tblproducts.name AS packagename,
 					tblproducts.configoption5 AS dueDate
 				FROM
-					OnAppElasticUsers
+					OnAppvCD_Users
 				LEFT JOIN tblhosting ON
-					tblhosting.userid = `OnAppElasticUsers`.`WHMCSUserID`
-					AND tblhosting.server = `OnAppElasticUsers`.`serverID`
+					tblhosting.userid = `OnAppvCD_Users`.`WHMCSUserID`
+					AND tblhosting.server = `OnAppvCD_Users`.`serverID`
 				LEFT JOIN tblproducts ON
 					tblhosting.packageid = tblproducts.id
-					AND tblproducts.servertype = "OnAppElasticUsers"
+					AND tblproducts.servertype = "OnAppvCD_Users"
 				LEFT JOIN tblclients ON
-					tblclients.id = `OnAppElasticUsers`.`WHMCSUserID`
+					tblclients.id = `OnAppvCD_Users`.`WHMCSUserID`
 				LEFT JOIN tblcurrencies ON
 					tblcurrencies.id = tblclients.currency
 				WHERE
 					tblhosting.domainstatus IN ( "Active", "Suspended" )
-					AND `OnAppElasticUsers`.`isTrial` = FALSE
 				ORDER BY
-					`OnAppElasticUsers`.`OnAppUserID`';
+					`OnAppvCD_Users`.`OnAppUserID`';
 		$this->clients = full_query( $sql );
 	}
 
@@ -169,7 +168,7 @@ abstract class OnAppElasticUsers_Cron {
 				FROM
 					tblservers
 				WHERE
-					type = "OnAppElasticUsers"';
+					type = "OnAppvCD"';
 		$result = full_query( $sql );
 		while( $server = mysql_fetch_assoc( $result ) ) {
 			$server[ 'password' ] = decrypt( $server[ 'password' ] );
@@ -191,8 +190,8 @@ abstract class OnAppElasticUsers_Cron {
 	}
 
 	protected function generateInvoiceData( $data, array $client ) {
-		require_once dirname( __DIR__ ) . '/OnAppElasticUsers.php';
-		$module = new OnAppElasticUsersModule;
+		require_once dirname( __DIR__ ) . '/OnAppvCD.php';
+		$module = new OnAppvCDModule;
 		$lang = $module->loadLang()->Invoice;
 
 		//check if invoice should be generated
@@ -271,8 +270,8 @@ abstract class OnAppElasticUsers_Cron {
 		global $whmcsmysql, $cc_encryption_hash, $templates_compiledir, $CONFIG, $_LANG, $whmcs;
 
 		require_once $this->root . 'init.php';
-		require_once $this->root . '/modules/servers/OnAppElasticUsers/includes/php/CURL.php';
-		require_once $this->root . '/modules/servers/OnAppElasticUsers/includes/php/SOP.php';
+		require_once $this->root . '/modules/servers/OnAppvCD/includes/php/CURL.php';
+		require_once $this->root . '/modules/servers/OnAppvCD/includes/php/SOP.php';
 		include_once $this->root . 'includes/processinvoices.php';
 		include_once $this->root . 'includes/invoicefunctions.php';
 

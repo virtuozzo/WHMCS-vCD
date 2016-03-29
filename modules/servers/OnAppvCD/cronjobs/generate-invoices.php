@@ -2,7 +2,7 @@
 
 require __DIR__ . '/common.php';
 
-class OnAppElasticUsers_Cron_Invoices extends OnAppElasticUsers_Cron {
+class OnAppvCD_Cron_Invoices extends OnAppvCD_Cron {
 	const TYPE = 'invoices';
 
 	protected function run() {
@@ -68,7 +68,7 @@ class OnAppElasticUsers_Cron_Invoices extends OnAppElasticUsers_Cron {
 								`tblinvoiceitems`
 							SET
 								`relid` = :WHMCSServiceID,
-								`type` = "OnAppElasticUsers"
+								`type` = "OnAppvCD"
 							WHERE
 								`invoiceid` = :invoiceID';
 					$qry = str_replace( ':WHMCSServiceID', $client[ 'service_id' ], $qry );
@@ -76,7 +76,7 @@ class OnAppElasticUsers_Cron_Invoices extends OnAppElasticUsers_Cron {
 					full_query( $qry );
 
 					# save OnApp amount
-					$table  = 'OnAppElasticUsers_Cache';
+					$table  = 'OnAppvCD_Cache';
 					$values = [
 						'itemID' => $result[ 'invoiceid' ],
 						'type'   => 'invoiceData',
@@ -88,4 +88,4 @@ class OnAppElasticUsers_Cron_Invoices extends OnAppElasticUsers_Cron {
 		}
 	}
 }
-new OnAppElasticUsers_Cron_Invoices;
+new OnAppvCD_Cron_Invoices;

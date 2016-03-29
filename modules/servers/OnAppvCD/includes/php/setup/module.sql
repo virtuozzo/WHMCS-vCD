@@ -4,19 +4,13 @@ CREATE TABLE IF NOT EXISTS `{moduleName}_Users` (
 		`WHMCSUserID`   MEDIUMINT(11) UNSIGNED      NOT NULL,
 		`OnAppUserID`   MEDIUMINT(11) UNSIGNED      NOT NULL,
 		`serverID`      MEDIUMINT(11) UNSIGNED      NOT NULL,
-		`billingPlanID` MEDIUMINT(11) UNSIGNED      NOT NULL,
 		`billingType`   ENUM('postpaid', 'prepaid') NOT NULL DEFAULT 'postpaid',
-		`isTrial`       TINYINT(1)                  NOT NULL,
 		PRIMARY KEY (`id`),
 		-- UNIQUE KEY `user_constrain` (`serviceID`,`WHMCSUserID`,`OnAppUserID`),
 		UNIQUE KEY `user_integrity_constrain` (`OnAppUserID`, `serverID`)
 )
 		ENGINE = InnoDB
 		DEFAULT CHARSET = utf8;
-
-ALTER TABLE `OnAppvCD_Users` DROP `isTrial`;
-
-ALTER TABLE `OnAppvCD_Users` DROP `billingPlanID`;
 
 CREATE TABLE IF NOT EXISTS `{moduleName}_Cache` (
 		`id`     MEDIUMINT(11) UNSIGNED            NOT NULL AUTO_INCREMENT,
