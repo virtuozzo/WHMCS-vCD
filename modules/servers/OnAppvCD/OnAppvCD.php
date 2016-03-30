@@ -399,50 +399,6 @@ function OnAppvCD_AdminServicesTabFieldsSave( $params ) {
 	}
 }
 
-function OnAppvCD_Custom_GeneratePassword( $params ) {
-	$serviceID = $params[ 'serviceid' ];
-	$clientID  = $params[ 'clientsdetails' ][ 'userid' ];
-	$serverID  = $params[ 'serverid' ];
-	$password  = OnAppvCDModule::generatePassword();
-
-	$OnAppUserID = Capsule::table( OnAppvCDModule::MODULE_NAME . '_Users' )
-						  ->where( 'serverID', $serverID )
-						  ->where( 'serviceID', $serviceID )
-						  ->where( 'WHMCSUserID', $clientID )
-						  ->pluck( 'OnAppUserID' );
-
-	$module    = new OnAppvCDModule( $params );
-	$OnAppUser = $module->getObject( 'User' );
-	$OnAppUser->logger->setDebug( 1 );
-	$OnAppUser->_id       = $OnAppUserID;
-	$OnAppUser->_password = $password;
-	$OnAppUser->save();
-
-	$lang = $module->loadLang()->Client;
-	$data = new stdClass;
-
-	if( ! is_null( $OnAppUser->error ) ) {
-		$data->status  = false;
-		$data->message = $lang->PasswordNotSet . ':<br/>';
-		$data->message .= $OnAppUser->getErrorsAsString( '<br/>' );
-	}
-	else {
-		# Save OnApp login and password
-		Capsule::table( 'tblhosting' )
-			   ->where( 'id', $serviceID )
-			   ->update( [ 'password' => encrypt( $password ) ] );
-
-		// todo rename subject
-		sendmessage( 'OnApp account password has been generated', $serviceID );
-
-		$data->status  = true;
-		$data->message = $lang->PasswordSet;
-	}
-
-	echo json_encode( $data );
-	exit;
-}
-
 function OnAppvCD_Custom_OutstandingDetails( $params = '' ) {
 	$module = new OnAppvCDModule;
 	$data = $module->getAmount( $params );

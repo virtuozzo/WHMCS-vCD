@@ -30,9 +30,6 @@
 		<button type="submit" class="btn btn-default">
 			{$lang->OpenCP}
 		</button>
-		<button type="button" class="btn btn-default" id="change-password" data-process="{$lang->Processing}">
-			{$lang->GenerateNewPassword}
-		</button>
 	</form>
 
 	<div class="alert">

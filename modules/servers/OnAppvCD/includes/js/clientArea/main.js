@@ -1,41 +1,4 @@
 $( document ).ready( function() {
-	// generate new password
-	$( '#change-password' ).on( 'click', function() {
-		$( '#gotocp .alert' ).hide();
-		var btn = $( this );
-		OnAppModule_toggleButton( btn, 'process', true );
-
-		$.ajax( {
-			url:     document.location.href,
-			data:    {
-				modop: 'custom',
-				a:     'GeneratePassword'
-			},
-			error:   function() {
-				$( '#gotocp .alert span' ).html( LANG.GeneralIssue );
-				var alert = $( '#gotocp .alert' );
-				alert.removeClass().addClass( 'alert alert-danger' ).show( 'fast' );
-			},
-			success: function( data ) {
-				data = JSON.parse( data );
-				$( '#gotocp .alert span' ).html( data.message );
-				var alert = $( '#gotocp .alert' );
-				alert.removeClass().addClass( 'alert' );
-				if( data.status ) {
-					alert.addClass( 'alert-success' ).show( 'fast' );
-					setTimeout( function() {
-						location.reload();
-					}, 1500 );
-				}
-				else {
-					alert.addClass( 'alert-danger' ).show( 'fast' );
-				}
-			}
-		} ).always( function() {
-			OnAppModule_toggleButton( btn, 'reset', true );
-		} );
-	} );
-
 	// datetime picker
 	var opts = {
 		format:           'YYYY-MM-DD HH:mm',
