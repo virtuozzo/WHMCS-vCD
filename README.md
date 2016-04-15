@@ -18,7 +18,7 @@
 
 2. Download the latest version of the [OnApp PHP Wrapper](https://github.com/OnApp/OnApp-PHP-Wrapper-External/archive/4.2.0.zip)
 
-3. Extract the files so they are located in the following directory:
+3. Extract the files so they are located in the following directory: ```{WHMCS root}/includes/wrapper```
 	
 4. Download the latest version of the [WHMCS Module](https://github.com/OnApp/WHMCS-vCD/archive/master.zip)
 
