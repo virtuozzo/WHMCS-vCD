@@ -24,20 +24,24 @@ $( document ).ready( function() {
 
 		//$( '#stat_data tbody' ).hide('fast');
 		$( '#app' ).addClass( 'app-hidden' );
+		var outstandingDetailsData = {
+			getstat:   1,
+			modop:     'custom',
+			a:         'OutstandingDetails',
+			start:     $( '#datetimepicker1 input' ).val(),
+			end:       $( '#datetimepicker2 input' ).val(),
+			tz_offset: function() {
+				var myDate = new Date();
+				offset = myDate.getTimezoneOffset();
+				return offset;
+			}
+		};
+		if (typeof window.onappvcd_serviceid !== 'undefined') {
+			outstandingDetailsData.id = window.onappvcd_serviceid;
+		}
 		$.ajax( {
 			url:     document.location.href,
-			data:    {
-				getstat:   1,
-				modop:     'custom',
-				a:         'OutstandingDetails',
-				start:     $( '#datetimepicker1 input' ).val(),
-				end:       $( '#datetimepicker2 input' ).val(),
-				tz_offset: function() {
-					var myDate = new Date();
-					offset = myDate.getTimezoneOffset();
-					return offset;
-				}
-			},
+			data:    outstandingDetailsData,
 			error:   function() {
 				$( '#stat_data tbody' ).addClass( 'app-hidden' );
 				$( 'tr#error' ).show();

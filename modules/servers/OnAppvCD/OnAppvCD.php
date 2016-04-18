@@ -82,7 +82,7 @@ function OnAppvCD_CreateAccount( $params ) {
 	$clientsDetails  = $params[ 'clientsdetails' ];
 	$serviceID       = $params[ 'serviceid' ];
 	$serverID        = $params[ 'serverid' ];
-	$userName        = $params[ 'username' ] ?: $clientsDetails[ 'email' ];
+	$userName        = $clientsDetails[ 'email' ];
 	$password        = OnAppvCDModule::generatePassword();
 	$productSettings = json_decode( $params[ 'configoption24' ] )->$serverID;
 

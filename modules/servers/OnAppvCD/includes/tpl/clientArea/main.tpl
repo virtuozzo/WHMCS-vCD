@@ -86,19 +86,66 @@
 </table>
 
 
+{literal}
+<script>
+	$( document ).ready( function() {
+		var body = $("body");
+		//check if bootstrap is loaded
+		if(typeof($.fn.modal) === 'undefined') {
+			body.append('<script src="assets/js/jquery.min.js"></sc'+'ript>');
+			body.append('<style type="text/css">@import url("/assets/css/bootstrap.min.css");</style>');
+			body.append('<script src="assets/js/bootstrap.min.js"><'+'/'+'script>');
+			var customCss='<style>#top_container{height: 63px;}body{background-color: #369;}</style>';
+			body.append(customCss);
+			window.onappvcd_serviceid = {/literal}{$params->serviceid}{literal};
+
+			body.append('<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.9.0/moment-with-locales.js"></sc'+'ript>');
+			body.append('<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datetimepicker/4.17.37/css/bootstrap-datetimepicker.min.css"/>');
+			body.append('<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datetimepicker/4.17.37/js/bootstrap-datetimepicker.min.js"></sc'+'ript>');
+
+			body.append('<link rel="stylesheet" href="//cdn.rawgit.com/jaunesarmiento/prevue.js/master/src/css/font-awesome-eyes.css"/>');
+			body.append('<script type="text/javascript" src="//cdn.rawgit.com/jaunesarmiento/prevue.js/master/src/js/jquery.prevue.min.js"></sc'+'ript>');
+
+			body.append('<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/vue/1.0.16/vue.min.js"></sc'+'ript>');
+
+		}
+
+	});
+</script>
+{/literal}
+
 <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.9.0/moment-with-locales.js"></script>
+
 <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datetimepicker/4.17.37/css/bootstrap-datetimepicker.min.css"/>
 <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datetimepicker/4.17.37/js/bootstrap-datetimepicker.min.js"></script>
 
 <link rel="stylesheet" href="//cdn.rawgit.com/jaunesarmiento/prevue.js/master/src/css/font-awesome-eyes.css"/>
 <script type="text/javascript" src="//cdn.rawgit.com/jaunesarmiento/prevue.js/master/src/js/jquery.prevue.min.js"></script>
 
-{*<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/accounting.js/0.3.2/accounting.min.js"></script>*}
 <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/vue/1.0.16/vue.min.js"></script>
 
 {if $organizationType == 1}
-	<script type="text/javascript" src="modules/servers/{$moduleName}/includes/js/clientArea/single-org.js"></script>
+	{literal}
+		<script>
+			$( document ).ready( function() {
+				$("body").append('<script type="text/javascript" src="modules/servers/{/literal}{$moduleName}{literal}/includes/js/clientArea/single-org.js"></sc'+'ript>');
+			});
+		</script>
+	{/literal}
 {else}
-	<script type="text/javascript" src="modules/servers/{$moduleName}/includes/js/clientArea/multi-org.js"></script>
+	{literal}
+		<script>
+			$( document ).ready( function() {
+				$("body").append('<script type="text/javascript" src="modules/servers/{/literal}{$moduleName}{literal}/includes/js/clientArea/multi-org.js"></sc'+'ript>');
+			});
+		</script>
+	{/literal}
 {/if}
-<script type="text/javascript" src="modules/servers/{$moduleName}/includes/js/clientArea/main.js"></script>
+
+{literal}
+	<script>
+		$( document ).ready( function() {
+			$("body").append('<script type="text/javascript" src="modules/servers/{/literal}{$moduleName}{literal}/includes/js/clientArea/main.js"></sc'+'ript>');
+		});
+	</script>
+{/literal}
