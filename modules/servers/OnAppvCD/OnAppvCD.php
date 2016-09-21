@@ -103,7 +103,7 @@ function OnAppvCD_CreateAccount( $params ) {
 		$userGroup->save();
 		$userGroup = $userGroup->id;
 	}
-
+	sleep(10);
 	$OnAppUser                   = $module->getObject( 'User' );
 	$OnAppUser->_email           = $clientsDetails[ 'email' ];
 	$OnAppUser->_password        = $OnAppUser->_password_confirmation = $password;
