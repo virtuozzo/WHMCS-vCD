@@ -306,4 +306,75 @@ class OnAppvCDModule {
 
 		return $password;
 	}
+
+	private function getWrapperVersion(){
+		$pathToWrapper = realpath( ROOTDIR ) . '/includes/wrapper/';
+		$version = file_get_contents( $pathToWrapper.'version.txt' );
+
+		return $version;
+	}
+
+	private function getAPIVersion() {
+		$obj = new OnApp_Factory( $this->server->address, $this->server->user, $this->server->pass);
+		$apiVersion = (string) $obj->getAPIVersion();
+
+		return $apiVersion;
+	}
+
+	public function checkWrapperVersion(){
+        $wrapperVersion = trim($this->getWrapperVersion());
+        $apiVersion = trim($this->getAPIVersion());
+
+        $result = array();
+        $result['wrapperVersion'] = $wrapperVersion; 
+        $result['apiVersion'] = $apiVersion;
+        if(($wrapperVersion == '')||($apiVersion == '')){
+            $result['status'] = false;
+            return $result;
+        }
+
+        $wrapperVersionAr = preg_split( '/[.,]/', $wrapperVersion, NULL, PREG_SPLIT_NO_EMPTY );
+        if((count($wrapperVersionAr) == 1)&&($wrapperVersionAr[0] == '')){
+            $result['status'] = false;
+            return $result;
+        }
+
+        $apiVersionAr     = preg_split( '/[.,]/', $apiVersion, NULL, PREG_SPLIT_NO_EMPTY );
+        if((count($apiVersionAr) == 1)&&($apiVersionAr[0] == '')){
+            $result['status'] = false;
+            return $result;
+        }
+
+        $result['status'] = true;
+        foreach ( $apiVersionAr as $apiVersionKey => $apiVersionValue ) {
+            if ( ! isset( $wrapperVersionAr[ $apiVersionKey ] ) ) {
+                $result['status'] = false;
+                break;
+            }
+
+            $apiVersionValue     = (int) $apiVersionValue;
+            $wrapperVersionValue = (int) $wrapperVersionAr[ $apiVersionKey ];
+
+            if ( $apiVersionValue == $wrapperVersionValue ) {
+                continue;
+            }
+
+            $result['status'] = ( $wrapperVersionAr[ $apiVersionKey ] > $apiVersionValue );
+            break;
+        }
+
+        return $result;
+	}
+
+    public function checkObject( $class, $id ) {
+        $className = 'OnApp_' . $class;
+        $obj       = new $className;
+        $obj->auth( $this->server->address, $this->server->user, $this->server->pass );
+
+        $obj->id = $id;
+        $obj->load();
+
+        return is_null( $obj->getErrorsAsArray() );
+    }
+	
 }

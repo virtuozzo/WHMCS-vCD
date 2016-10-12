@@ -45,8 +45,15 @@ function OnAppvCD_ConfigOptions() {
 				continue;
 			}
 			$serverConfig->password = decrypt( $serverConfig->password );
+			$module                 = new OnAppvCDModule( $serverConfig );
 
-			$module                                   = new OnAppvCDModule( $serverConfig );
+            //compare wrapper version with API
+			$compareResult = $module->checkWrapperVersion();
+			if( !$compareResult['status'] ){
+				$data->error = $data->lang->WrapperUpdate . ' (wrapper version: ' . $compareResult['wrapperVersion'] . '; ' . 'api version: ' . $compareResult['apiVersion'] . ')';
+                goto end;
+            }
+
 			$data->servers->{$serverConfig->id}       = $module->getData();
 			$data->servers->{$serverConfig->id}->Name = $serverConfig->name;
 		}
@@ -102,8 +109,18 @@ function OnAppvCD_CreateAccount( $params ) {
 		$userGroup->billing_plan_ids        = $productSettings->GroupBillingPlans;
 		$userGroup->save();
 		$userGroup = $userGroup->id;
+
+        $n        = 0;
+        $attempts = 10;
+        while ( ! $module->checkObject( 'UserGroup', $userGroup ) ) {
+            $n++;
+            if ( $n > $attempts ) {
+                return $lang->Error_CreateUser;
+            }
+            sleep( 1 );
+        }
 	}
-	sleep(10);
+
 	$OnAppUser                   = $module->getObject( 'User' );
 	$OnAppUser->_email           = $clientsDetails[ 'email' ];
 	$OnAppUser->_password        = $OnAppUser->_password_confirmation = $password;

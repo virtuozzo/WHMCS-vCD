@@ -57,7 +57,8 @@ return [
 		'ResetServerCache'            => 'Reset Server Cache',
 		'ErrorTitle'                  => 'Something Went Wrong!',
 		'Error_WrapperNotFound'       => 'OnApp PHP wrapper not found. Please download it from https://github.com/OnApp/OnApp-PHP-Wrapper-External/releases and put into',
-		'Error_CreateUser'            => 'Cannot create OnApp user',
+        'Error_CreateUser'            => 'Cannot create OnApp user',
+        'Error_CreateUserGroup'       => 'Cannot create OnApp userGroup',
 		'Error_SuspendUser'           => 'Cannot suspend OnApp user',
 		'Error_TerminateUser'         => 'Cannot terminate OnApp user',
 		'Error_UnsuspendUser'         => 'Cannot unsuspend OnApp user',
@@ -65,6 +66,7 @@ return [
 		'Error_LinkUser'              => 'Cannot link OnApp user',
 		'Error_UserNotFound'          => 'Cannot find OnApp user for client #%s on server #%s',
 		'PasswordNotSet'              => 'Password not set',
+		'WrapperUpdate'               => 'Please update the <a href="https://github.com/OnApp/OnApp-PHP-Wrapper-External" style="color:red" target="_blank">wrapper</a> according to your OnApp CP version',
 	],
 	'Client'  => [
 		'CPURL'                => 'control panel URL',

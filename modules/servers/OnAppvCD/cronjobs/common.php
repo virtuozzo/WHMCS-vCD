@@ -143,6 +143,7 @@ abstract class OnAppvCD_Cron {
 				LEFT JOIN tblhosting ON
 					tblhosting.userid = `OnAppvCD_Users`.`WHMCSUserID`
 					AND tblhosting.server = `OnAppvCD_Users`.`serverID`
+					AND tblhosting.id = `OnAppvCD_Users`.`serviceID`
 				LEFT JOIN tblproducts ON
 					tblhosting.packageid = tblproducts.id
 					AND tblproducts.servertype = "OnAppvCD_Users"
