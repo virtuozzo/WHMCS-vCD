@@ -1,82 +1,111 @@
 $( document ).ready( function() {
-	var tables = $( 'table.form' );
-	// remove old table
-	var newTable = $( 'span.oeu-container' );
-	tables.eq( 3 ).after( newTable )
-	tables.eq( 3 ).remove()
-
-	// apply chosen
-	var chzn = $( 'table.oeu select' );
-	if( chzn.length ) {
-		var opts = {
-			width: '40%',
-			disable_search_threshold: 5,
-			placeholder_text_multiple: 'Select Some Options'
-		};
-		tables.eq( 2 ).find( 'select' ).chosen( opts );
-		chzn.chosen( opts );
-	}
-
-	// remove validation style
-	chzn.on( 'change', function( e ) {
-		$( this ).next().find( 'a' ).css( 'border', '' );
-		$( this ).next().find( 'ul' ).css( 'border', '' );
-	} );
-
-	// reinit chosen
-	$( '#tabLink3' ).click( function() {
-		setTimeout( function() {
-			$( 'table.oeu select' ).trigger( 'chosen:updated' );
-		}, 100 );
-	} );
-
-	// reset cache handler
-	$( '#oeu-reset-cache' ).click( function() {
-		$( '.oeu-reset-cache' ).val( 1 );
-		$( '#' + OnAppModuleName + '_Skip' ).val( 1 );
-		$( 'form[name="packagefrm"]' ).submit();
-	} );
-
-	// change server handler
-	$( 'table.oeu select:first' ).on( 'change', function() {
-		if( $( 'table.oeu select' ).length > 1 ) {
-			// todo localize
-			var r = confirm( 'Save current settings?' );
-			if( r == false ) {
-				$( '#' + OnAppModuleName + '_Skip' ).val( 1 );
-				$( 'form[name="packagefrm"]' ).submit();
-				return;
+	if($( '#tab3' ).is(':visible')){
+		function delayedOnTab3show(){
+			var isGood = false;
+			var tables = $( 'table.form' );
+			var chzn = $( 'table.oeu select' );
+			if( chzn.length ) {
+				var selectItems = tables.eq( 2 ).find( 'select' );
+				if(typeof selectItems.chosen == 'function'){
+					isGood = true;
+				}
+			}
+			if(isGood){
+				onTab3show();
+			}else{
+				setTimeout( function() {
+					delayedOnTab3show();
+				}, 200 );
 			}
 		}
-		if( OnAppvCD_Validate() ) {
+		delayedOnTab3show();
+	}
+
+	$( '#tabLink3' ).click( function() {
+		onTab3show();
+	} );
+
+	function onTab3show(){
+		var tables = $( 'table.form' );
+		// remove old table
+		var newTable = $( 'span.oeu-container' );
+		tables.eq( 3 ).after( newTable );
+		tables.eq( 3 ).remove();
+
+		// apply chosen
+		var chzn = $( 'table.oeu select' );
+		if( chzn.length ) {
+			var opts = {
+				width: '40%',
+				disable_search_threshold: 5,
+				placeholder_text_multiple: 'Select Some Options'
+			};
+			tables.eq( 2 ).find( 'select' ).chosen( opts );
+			chzn.chosen( opts );
+		}
+
+		// remove validation style
+		chzn.on( 'change', function( e ) {
+			$( this ).next().find( 'a' ).css( 'border', '' );
+			$( this ).next().find( 'ul' ).css( 'border', '' );
+		} );
+
+		// reinit chosen
+		$( '#tabLink3' ).click( function() {
+			setTimeout( function() {
+				$( 'table.oeu select' ).trigger( 'chosen:updated' );
+			}, 100 );
+		} );
+
+		// reset cache handler
+		$( '#oeu-reset-cache' ).click( function() {
+			$( '.oeu-reset-cache' ).val( 1 );
+			$( '#' + OnAppModuleName + '_Skip' ).val( 1 );
 			$( 'form[name="packagefrm"]' ).submit();
-		}
-	} );
+		} );
 
-	// organization type handler
-	$( 'table.oeu #org-type' ).on( 'change', function() {
-		if( this.value == 1 ) {
-			$( 'table.oeu #group-row select' ).prop( 'disabled', false );
-			$( 'table.oeu #group-row' ).show();
+		// change server handler
+		$( 'table.oeu select:first' ).on( 'change', function() {
+			if( $( 'table.oeu select' ).length > 1 ) {
+				// todo localize
+				var r = confirm( 'Save current settings?' );
+				if( r == false ) {
+					$( '#' + OnAppModuleName + '_Skip' ).val( 1 );
+					$( 'form[name="packagefrm"]' ).submit();
+					return;
+				}
+			}
+			if( OnAppvCD_Validate() ) {
+				$( 'form[name="packagefrm"]' ).submit();
+			}
+		} );
 
-			$('#billing-plan').html( $('#bp-regular').html() );
+		// organization type handler
+		$( 'table.oeu #org-type' ).on( 'change', function() {
+			if( this.value == 1 ) {
+				$( 'table.oeu #group-row select' ).prop( 'disabled', false );
+				$( 'table.oeu #group-row' ).show();
 
-			$( 'table.oeu #group-bp-row' ).hide();
-			$( 'table.oeu #group-bp-row select' ).prop( 'disabled', true );
-		}
-		else {
-			$( 'table.oeu #group-row' ).hide();
-			$( 'table.oeu #group-row select' ).prop( 'disabled', true );
+				$('#billing-plan').html( $('#bp-regular').html() );
 
-			$( '#billing-plan' ).html( $( '#bp-company' ).html() );
+				$( 'table.oeu #group-bp-row' ).hide();
+				$( 'table.oeu #group-bp-row select' ).prop( 'disabled', true );
+			}
+			else {
+				$( 'table.oeu #group-row' ).hide();
+				$( 'table.oeu #group-row select' ).prop( 'disabled', true );
 
-			$( 'table.oeu #group-bp-row' ).show();
-			$( 'table.oeu #group-bp-row select' ).prop( 'disabled', false );
-		}
-		$( 'table.oeu select' ).trigger( 'chosen:updated' );
-	} );
+				$( '#billing-plan' ).html( $( '#bp-company' ).html() );
 
-	$( 'form[name="packagefrm"] input[type="submit"]' ).on( 'click', OnAppvCD_Validate );
+				$( 'table.oeu #group-bp-row' ).show();
+				$( 'table.oeu #group-bp-row select' ).prop( 'disabled', false );
+			}
+			$( 'table.oeu select' ).trigger( 'chosen:updated' );
+		} );
+
+		$( 'form[name="packagefrm"] input[type="submit"]' ).on( 'click', OnAppvCD_Validate );
+
+	}
 } );
 
 function OnAppvCD_Validate() {

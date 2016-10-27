@@ -1,7 +1,22 @@
 <?php
 
-require_once __DIR__ . '/includes/php/ModuleWrapper.php';
 use Illuminate\Database\Capsule\Manager as Capsule;
+
+require_once __DIR__ . '/includes/php/ModuleWrapper.php';
+
+function initConfigOptionfromDB()
+{
+    $data = Capsule::table('tblproducts')->where('servertype', 'OnAppvCD')->get();
+    $packageconfigoption = [];
+    $packageconfigoption[3] = [];
+    if (is_array($data) && count($data) > 0) {
+        for($i=1; $i<=24; $i++){
+            $packageconfigoption[$i] = $data[0]->{"configoption".$i};
+        }
+    }
+
+    return $packageconfigoption;
+}
 
 function OnAppvCD_ConfigOptions() {
 	$data         = new stdClass;
@@ -62,10 +77,12 @@ function OnAppvCD_ConfigOptions() {
 			# get additional data
 			$data->TimeZones      = file_get_contents( __DIR__ . '/includes/php/tzs.json' );
 			$data->TimeZones      = json_decode( $data->TimeZones );
-			$data->productOptions = $GLOBALS[ 'packageconfigoption' ] ?: [ ];
+
+			$data->productOptions = initConfigOptionfromDB();
 			if( ! ( empty( $data->productOptions[ 1 ] ) || empty( $data->productOptions[ 24 ] ) ) ) {
 				$data->productSettings     = json_decode( $data->productOptions[ 24 ] )->{$data->productOptions[ 1 ]};
-				$data->productSettingsJSON = htmlspecialchars( $GLOBALS[ 'packageconfigoption' ][ 24 ] );
+
+				$data->productSettingsJSON = htmlspecialchars( $data->productOptions[ 24 ] );
 			}
 		}
 	}
@@ -288,6 +305,7 @@ function OnAppvCD_UnsuspendAccount( $params ) {
 }
 
 function OnAppvCD_ClientArea( $params = '' ) {
+
 	if( isset( $_GET[ 'modop' ] ) && ( $_GET[ 'modop' ] == 'custom' ) ) {
 		if( isset( $_GET[ 'a' ] ) ) {
 			$functionName = OnAppvCDModule::MODULE_NAME . '_Custom_' . $_GET[ 'a' ];
@@ -301,11 +319,13 @@ function OnAppvCD_ClientArea( $params = '' ) {
 		}
 	}
 
+
 	$data         = new stdClass;
 	$module       = new OnAppvCDModule( $params );
 	$data->lang   = $module->loadLang()->Client;
 	$data->jsLang = json_encode( $data->lang );
 	$data->params = json_decode( json_encode( $params ) );
+
 
 	# server form
 	$server = $params[ 'serverhttpprefix' ] . '://' . ( $params[ 'serverhostname' ] ?: $params[ 'serverip' ] );
@@ -324,12 +344,14 @@ function OnAppvCD_ClientArea( $params = '' ) {
 		$key . substr( md5( uniqid( rand( 1, 999999 ), true ) ), rand( 0, 26 ), 5 ),
 		base64_encode( base64_encode( $crypttext ) ),
 	];
+
 	$data->token            = md5( uniqid( rand( 1, 999999 ), true ) );
 	$data->serverURL        = $server;
 	$data->organizationType = $params[ 'configoption7' ];
 	$data->additional       = Capsule::table( OnAppvCDModule::MODULE_NAME . '_Users' )
 									 ->where( 'serviceID', $params[ 'serviceid' ] )
 									 ->first();
+
 
 	return $module->buildHTML( $data, 'clientArea/main.tpl' );
 }
