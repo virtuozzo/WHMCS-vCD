@@ -61,7 +61,7 @@ class OnAppvCDModule {
 	}
 
 	public function getBillingPlans() {
-		$data = $this->getObject( 'BillingPlan' )->getList();
+		$data = $this->getObject( 'BillingUser' )->getList();
 
 		return $this->buildArray( $data );
 	}
