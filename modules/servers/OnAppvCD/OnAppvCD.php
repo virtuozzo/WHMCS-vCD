@@ -66,6 +66,9 @@ function OnAppvCD_ConfigOptions() {
 			$compareResult = $module->checkWrapperVersion();
 			if( !$compareResult['status'] ){
 				$data->error = $data->lang->WrapperUpdate . ' (wrapper version: ' . $compareResult['wrapperVersion'] . '; ' . 'api version: ' . $compareResult['apiVersion'] . ')';
+                if($compareResult['apiMessage'] != ''){
+                    $data->error .= '; ' . $compareResult['apiMessage'];
+                }
                 goto end;
             }
 
@@ -115,15 +118,17 @@ function OnAppvCD_CreateAccount( $params ) {
 	}
 	else {
 		# create user group // todo add error handling and dupe title
-		$label                              = Capsule::table( 'tblcustomfieldsvalues' )
+		$labelVal                           = Capsule::table( 'tblcustomfieldsvalues' )
 													 ->where( 'relid', $serviceID )
-													 ->pluck( 'value' );
+													 ->select( 'value' )
+													 ->first();
+        $label = $labelVal->value;
 		$userGroup                          = $module->getObject( 'UserGroup' );
 		$userGroup->label                   = $label;
 		$userGroup->assign_to_vcloud        = true;
 		$userGroup->hypervisor_id           = $productSettings->HyperVisor;
 		$userGroup->company_billing_plan_id = $productSettings->BillingPlanDefault;
-		$userGroup->billing_plan_ids        = $productSettings->GroupBillingPlans;
+        $userGroup->billing_plan_ids        = $productSettings->GroupBillingPlans;
 		$userGroup->save();
 		$userGroup = $userGroup->id;
 
@@ -203,10 +208,13 @@ function OnAppvCD_TerminateAccount( $params ) {
 	$clientID  = $params[ 'clientsdetails' ][ 'userid' ];
 	$serverID  = $params[ 'serverid' ];
 
-	$OnAppUserID = Capsule::table( $tableName )
+	$OnAppUserIDVal = Capsule::table( $tableName )
 						  ->where( 'serverID', $serverID )
 						  ->where( 'serviceID', $serviceID )
-						  ->pluck( 'OnAppUserID' );
+						  ->select( 'OnAppUserID' )
+						  ->first();
+    $OnAppUserID = $OnAppUserIDVal->OnAppUserID;
+
 	if( ! $OnAppUserID ) {
 		return sprintf( $lang->Error_UserNotFound, $clientID, $serverID );
 	}
@@ -244,10 +252,13 @@ function OnAppvCD_SuspendAccount( $params ) {
 	$clientID  = $params[ 'clientsdetails' ][ 'userid' ];
 	$serviceID = $params[ 'serviceid' ];
 
-	$OnAppUserID = Capsule::table( $tableName )
+    $OnAppUserIDVal = Capsule::table( $tableName )
 						  ->where( 'serverID', $serverID )
 						  ->where( 'serviceID', $serviceID )
-						  ->pluck( 'OnAppUserID' );
+						  ->select( 'OnAppUserID' )
+						  ->first();
+    $OnAppUserID = $OnAppUserIDVal->OnAppUserID;
+
 	if( ! $OnAppUserID ) {
 		return sprintf( $lang->Error_UserNotFound, $clientID, $serverID );
 	}
@@ -277,10 +288,13 @@ function OnAppvCD_UnsuspendAccount( $params ) {
 	$clientID  = $params[ 'clientsdetails' ][ 'userid' ];
 	$serviceID = $params[ 'serviceid' ];
 
-	$OnAppUserID = Capsule::table( $tableName )
+    $OnAppUserIDVal = Capsule::table( $tableName )
 						  ->where( 'serverID', $serverID )
 						  ->where( 'serviceID', $serviceID )
-						  ->pluck( 'OnAppUserID' );
+						  ->select( 'OnAppUserID' )
+						  ->first();
+    $OnAppUserID = $OnAppUserIDVal->OnAppUserID;
+
 	if( ! $OnAppUserID ) {
 		return sprintf( $lang->Error_UserNotFound, $clientID, $serverID );
 	}

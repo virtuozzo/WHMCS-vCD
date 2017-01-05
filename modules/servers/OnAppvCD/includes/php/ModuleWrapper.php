@@ -317,15 +317,20 @@ class OnAppvCDModule {
 	private function getAPIVersion() {
 		$obj = new OnApp_Factory( $this->server->address, $this->server->user, $this->server->pass);
 		$apiVersion = (string) $obj->getAPIVersion();
-
-		return $apiVersion;
+        return array(
+            'version' => trim($apiVersion),
+            'message' => trim($obj->getErrorsAsString( ', ' )),
+        );
 	}
 
 	public function checkWrapperVersion(){
         $wrapperVersion = trim($this->getWrapperVersion());
-        $apiVersion = trim($this->getAPIVersion());
+
+        $apiVersionArr = $this->getAPIVersion();
+        $apiVersion = $apiVersionArr['version'];
 
         $result = array();
+        $result['apiMessage'] = $apiVersionArr['message'];
         $result['wrapperVersion'] = $wrapperVersion; 
         $result['apiVersion'] = $apiVersion;
         if(($wrapperVersion == '')||($apiVersion == '')){

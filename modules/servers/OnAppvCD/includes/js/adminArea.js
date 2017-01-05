@@ -21,8 +21,12 @@ $( document ).ready( function() {
 		delayedOnTab3show();
 	}
 
+	var tabLink3Clicked = false;
 	$( '#tabLink3' ).click( function() {
-		onTab3show();
+		if(!tabLink3Clicked){
+			onTab3show();
+		}
+		tabLink3Clicked = true;
 	} );
 
 	function onTab3show(){
