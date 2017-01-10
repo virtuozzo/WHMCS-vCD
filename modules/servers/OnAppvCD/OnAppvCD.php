@@ -149,7 +149,13 @@ function OnAppvCD_CreateAccount( $params ) {
 	$OnAppUser->_login           = $userName;
 	$OnAppUser->_first_name      = $clientsDetails[ 'firstname' ];
 	$OnAppUser->_last_name       = $clientsDetails[ 'lastname' ];
-	$OnAppUser->_billing_plan_id = $productSettings->BillingPlanDefault;
+    if ( $productSettings->OrganizationType == 1 ) {
+        $OnAppUser->_billing_plan_id = $productSettings->BillingPlanDefault;
+    } else {
+        if ( is_array( $productSettings->GroupBillingPlans ) && count( $productSettings->GroupBillingPlans ) > 0 ) {
+            $OnAppUser->_billing_plan_id = $productSettings->GroupBillingPlans[0];
+        }
+    }
 	$OnAppUser->_role_ids        = $productSettings->Roles;
 	$OnAppUser->_time_zone       = $productSettings->TimeZone;
 	$OnAppUser->_user_group_id   = $userGroup;
