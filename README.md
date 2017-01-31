@@ -155,3 +155,48 @@ Each product must be assigned to a group which can either be visible or hidden f
 9. Save Changes.
 
 Now that the product has been created, you will be able to see it on the order form and setup customers using WHMCS.
+
+## Setting up cronjobs
+
+Add the following command to your cronjobs:
+
+```bash
+# run invoice generator at 01:00 on the first day of each month
+0 0 1 * *    /usr/bin/php -q {WHMCS}/modules/servers/onappusers/cronjobs/generate-invoices.php
+```
+
+*{WHMCS} is the full path to your WHMCS directory.*
+
+**_DO NOT SETUP INVOICE GENERATOR BEFORE TESTING (SEE BELOW)!_**
+
+
+### Advanced usage
+#####_Invoice generator_
+By default it generates customers invoices relying on collected statistics for the previous month.
+As usual it should be run once a month when you want generate invoices.
+
+You can force generator to generate invoices for the certain period by passing desired starting and ending dates in format 'YYYY-MM-DD HH:MM' as a parameters:
+
+```bash
+/usr/bin/php -q {WHMCS}/modules/servers/OnAppvCD/cronjobs/generate-invoices.php --since='2017-01-01 00:00' --till='2017-01-31 23:00'
+```
+
+**_for the proper calculation all dates should be entered in the server's timezone_**
+
+
+### Testing invoice generator
+We strongly recommend to test invoice generator before using in production to be sure that it works properly.
+For testing you should setup statistics collector (or run it from console) and run tester:
+
+```bash
+# test invoices for previous month
+/usr/bin/php -q {WHMCS}/modules/servers/OnAppvCD/cronjobs/test.php -l
+
+# test invoices for current month
+/usr/bin/php -q {WHMCS}/modules/servers/OnAppvCD/cronjobs/test.php -l --since='2017-01-10 00:00'
+
+```
+
+_Tester functionally is the same as generator itself, but it writes processed data to the file for review instead of generating real invoices._
+
+
