@@ -61,7 +61,11 @@ class OnAppvCDModule {
 	}
 
 	public function getBillingPlans() {
-		$data = $this->getObject( 'BillingUser' )->getList();
+        if( $this->getAPIVersion() > 5.1 ){
+            $data = $this->getObject( 'BillingUser' )->getList();
+        } else {
+            $data = $this->getObject( 'BillingPlan' )->getList();
+        }
 
 		return $this->buildArray( $data );
 	}

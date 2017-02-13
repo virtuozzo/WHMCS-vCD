@@ -54,7 +54,7 @@ abstract class OnAppvCD_Cron {
 		}
 
 		$data = $data->user_stat;
-		$unset = array(
+	    $unset = array(
 			'vm_stats',
 			'stat_time',
 			'user_resources_cost',
@@ -62,6 +62,7 @@ abstract class OnAppvCD_Cron {
 			'user_id',
 		);
 		$this->dataTMP = clone $data;
+
 		foreach( $data as $key => &$value ) {
 			if( in_array( $key, $unset ) ) {
 				unset( $data->$key );
@@ -74,19 +75,49 @@ abstract class OnAppvCD_Cron {
 		return $data;
 	}
 
-	protected function getResourcesData( $client, $date ) {
-		$date = http_build_query( $date );
+    protected function getResourcesData( $client, $date ) {
 
-		$url = $this->servers[ $client[ 'serverID' ] ][ 'address' ] . '/users/' . $client[ 'OnAppUserID' ] . '/user_statistics.json?' . $date;
-		$data = $this->sendRequest( $url, $this->servers[ $client[ 'serverID' ] ][ 'username' ], $this->servers[ $client[ 'serverID' ] ][ 'password' ] );
+        if ( $client['orgType'] == 1 ) {
 
-		if( $data ) {
-			return json_decode( $data );
-		}
-		else {
-			return false;
-		}
-	}
+            $date = http_build_query( $date );
+            $url  = $this->servers[ $client['serverID'] ]['address'] . '/users/' . $client['OnAppUserID'] . '/user_statistics.json?' . $date;
+            $data = $this->sendRequest( $url, $this->servers[ $client['serverID'] ]['username'], $this->servers[ $client['serverID'] ]['password'] );
+            $data = json_decode( $data );
+
+        } else {
+
+            $tmp = [
+                'configoption1'    => $client['configoption1'],
+                'serverusername'   => $client['username'],
+                'serverpassword'   => decrypt( $client['password'] ),
+                'serverhttpprefix' => $this->servers[ $client['serverID'] ]['serverhttpprefix'],
+                'serverip'         => $this->servers[ $client['serverID'] ]['serverip'],
+                'serverhostname'   => $this->servers[ $client['serverID'] ]['serverhostname'],
+            ];
+
+            $module          = new OnAppvCDModule( $tmp );
+            $vdcs            = $module->getObject( 'VDCS' )->getList();
+            $data            = new stdClass;
+            $data->user_stat = new stdClass;
+            foreach ( $vdcs as $vdc ) {
+                $tmp   = 0;
+                $stats = $module->getObject( 'VDCS_Statistics' )->getList( $vdc->id, $date );
+                foreach ( $stats as $stat ) {
+                    $tmp += $stat->cost;
+
+                }
+
+                $data->user_stat->total_cost += $tmp;
+                $data->user_stat->{"vdcs" . $vdc->id} += $tmp;
+            }
+        }
+
+        if ( $data ) {
+            return $data;
+        } else {
+            return false;
+        }
+    }
 
 	protected function sendRequest( $url, $user, $password ) {
 		if( $this->printEnabled ) {
@@ -131,10 +162,14 @@ abstract class OnAppvCD_Cron {
 					tblhosting.paymentmethod,
 					tblhosting.domain,
 					tblhosting.id AS service_id,
+					tblhosting.username AS username,
+					tblhosting.password AS password,
 					`OnAppvCD_Users`.`serverID`,
 					`OnAppvCD_Users`.`WHMCSUserID`,
 					`OnAppvCD_Users`.`OnAppUserID`,
 					`OnAppvCD_Users`.`billingType`,
+					tblproducts.configoption1 as configoption1,
+					tblproducts.configoption7 as orgType,
 					tblproducts.tax,
 					tblproducts.name AS packagename,
 					tblproducts.configoption5 AS dueDate
@@ -146,7 +181,7 @@ abstract class OnAppvCD_Cron {
 					AND tblhosting.id = `OnAppvCD_Users`.`serviceID`
 				LEFT JOIN tblproducts ON
 					tblhosting.packageid = tblproducts.id
-					AND tblproducts.servertype = "OnAppvCD_Users"
+					AND tblproducts.servertype = "OnAppvCD"
 				LEFT JOIN tblclients ON
 					tblclients.id = `OnAppvCD_Users`.`WHMCSUserID`
 				LEFT JOIN tblcurrencies ON
@@ -155,6 +190,7 @@ abstract class OnAppvCD_Cron {
 					tblhosting.domainstatus IN ( "Active", "Suspended" )
 				ORDER BY
 					`OnAppvCD_Users`.`OnAppUserID`';
+
 		$this->clients = full_query( $sql );
 	}
 
@@ -175,15 +211,19 @@ abstract class OnAppvCD_Cron {
 			$server[ 'password' ] = decrypt( $server[ 'password' ] );
 			if( $server[ 'secure' ] ) {
 				$server[ 'address' ] = 'https://';
+                $server[ 'serverhttpprefix' ] = 'https';
 			}
 			else {
 				$server[ 'address' ] = 'http://';
+                $server[ 'serverhttpprefix' ] = 'http';
 			}
 			if( empty( $server[ 'ipaddress' ] ) ) {
 				$server[ 'address' ] .= $server[ 'hostname' ];
+                $server[ 'serverhostname' ] = $server[ 'hostname' ];
 			}
 			else {
 				$server[ 'address' ] .= $server[ 'ipaddress' ];
+                $server[ 'serverip' ] = $server[ 'ipaddress' ];
 			}
 			unset( $server[ 'ipaddress' ], $server[ 'hostname' ], $server[ 'secure' ] );
 			$this->servers[ $server[ 'id' ] ] = $server;
@@ -251,8 +291,14 @@ abstract class OnAppvCD_Cron {
 		$i = 1;
 		foreach( $data as $key => $value ) {
 			if( $value > 0 ) {
+
+				if(isset($lang->$key)){
+				    $label = $lang->$key;
+				}else{
+				    $label = $key;
+				}
 				$tmp = array(
-					'itemdescription' . ++$i => $lang->$key,
+					'itemdescription' . ++$i => $label,
 					'itemamount' . $i        => $value,
 					'itemtaxed' . $i         => $taxed,
 				);

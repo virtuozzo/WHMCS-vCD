@@ -154,22 +154,54 @@ class OnAppvCD_Cron_Hourly extends OnAppvCD_Cron {
 		$result = serversuspendaccount( $client[ 'service_id' ] );
 	}
 
-	protected function getResourcesData( $client, $date ) {
-		// todo check dupe
-		$dateAsArray = $date;
-		$date = http_build_query( $date );
+    protected function getResourcesData( $client, $date ) {
+        $dateAsArray = $date;
 
-		$url = $this->servers[ $client[ 'serverID' ] ][ 'address' ] . '/users/' . $client[ 'OnAppUserID' ] . '/user_statistics.json?' . $date;
-		$data = $this->sendRequest( $url, $this->servers[ $client[ 'serverID' ] ][ 'username' ], $this->servers[ $client[ 'serverID' ] ][ 'password' ] );
+        if ( $client['orgType'] == 1 ) {
 
-		if( $data ) {
-			$this->saveLastCheckDate( $client, $dateAsArray );
-			return json_decode( $data );
-		}
-		else {
-			return array();
-		}
-	}
+            $date = http_build_query( $date );
+            $url  = $this->servers[ $client['serverID'] ]['address'] . '/users/' . $client['OnAppUserID'] . '/user_statistics.json?' . $date;
+            $data = $this->sendRequest( $url, $this->servers[ $client['serverID'] ]['username'], $this->servers[ $client['serverID'] ]['password'] );
+            $data = json_decode( $data );
+
+        } else {
+
+            $tmp = [
+                'configoption1'    => $client['configoption1'],
+                'serverusername'   => $client['username'],
+                'serverpassword'   => decrypt( $client['password'] ),
+                'serverhttpprefix' => $this->servers[ $client['serverID'] ]['serverhttpprefix'],
+                'serverip'         => $this->servers[ $client['serverID'] ]['serverip'],
+                'serverhostname'   => $this->servers[ $client['serverID'] ]['serverhostname'],
+            ];
+
+            $module = new OnAppvCDModule( $tmp );
+            $vdcs   = $module->getObject( 'VDCS' )->getList();
+
+            $data            = new stdClass;
+            $data->user_stat = new stdClass;
+            foreach ( $vdcs as $vdc ) {
+
+                $tmp   = 0;
+                $stats = $module->getObject( 'VDCS_Statistics' )->getList( $vdc->id, $date );
+
+                foreach ( $stats as $stat ) {
+                    $tmp += $stat->cost;
+                }
+
+                $data->user_stat->total_cost += $tmp;
+                $data->user_stat->{"vdcs" . $vdc->id} += $tmp;
+            }
+        }
+
+        if ( $data ) {
+            $this->saveLastCheckDate( $client, $dateAsArray );
+            return $data;
+        } else {
+            return array();
+        }
+
+    }
 
 	private function saveLastCheckDate( $client, $date ) {
 		$qry = 'INSERT INTO

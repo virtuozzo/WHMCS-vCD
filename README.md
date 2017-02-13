@@ -183,6 +183,11 @@ You can force generator to generate invoices for the certain period by passing d
 
 **_for the proper calculation all dates should be entered in the server's timezone_**
 
+### Prepay usage
+You can enable hourly billing in product settings, and generate invoices by next command:
+```bash
+/usr/bin/php -q {WHMCS}/modules/servers/OnAppvCD/cronjobs/hourly.php -l
+```
 
 ### Testing invoice generator
 We strongly recommend to test invoice generator before using in production to be sure that it works properly.
@@ -190,10 +195,10 @@ For testing you should setup statistics collector (or run it from console) and r
 
 ```bash
 # test invoices for previous month
-/usr/bin/php -q {WHMCS}/modules/servers/OnAppvCD/cronjobs/test.php -l
+/usr/bin/php -q {WHMCS}/modules/servers/OnAppvCD/cronjobs/test-invoices.php -l
 
 # test invoices for current month
-/usr/bin/php -q {WHMCS}/modules/servers/OnAppvCD/cronjobs/test.php -l --since='2017-01-10 00:00'
+/usr/bin/php -q {WHMCS}/modules/servers/OnAppvCD/cronjobs/test-invoices.php -l --since='2017-01-10 00:00'
 
 ```
 
