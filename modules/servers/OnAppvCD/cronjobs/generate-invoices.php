@@ -15,11 +15,15 @@ class OnAppvCD_Cron_Invoices extends OnAppvCD_Cron {
 					`username`
 				FROM
 					`tbladmins`
+                WHERE
+                    disabled = 0
 				LIMIT 1';
 		$res = mysql_query( $qry );
-		$admin = mysql_result( $res, 0 );
+		//$admin = mysql_result( $res, 0 );
+        $adminArr = mysql_fetch_assoc( $res );
+        $admin = $adminArr['username'];
 
-		# calculate invoice due date
+        # calculate invoice due date
 		$this->dueDate = date( 'Ymd' );
 
 		while( $client = mysql_fetch_assoc( $this->clients ) ) {

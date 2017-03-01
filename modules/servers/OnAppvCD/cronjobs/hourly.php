@@ -38,7 +38,10 @@ class OnAppvCD_Cron_Hourly extends OnAppvCD_Cron {
 					$startDate = gmdate( 'Y-m-01 00:00:00' );
 				}
 				else {
-					$startDate = mysql_result( $startDate, 0 );
+					//$startDate = mysql_result( $startDate, 0 );
+                    $startDateArr = mysql_fetch_assoc( $startDate );
+                    $startDate = $startDateArr['Date'];
+
 					$startDate = date( 'Y-m-d H:00:00', strtotime( $startDate ) - ( 1 * 3600 ) );
 				}
 			}
@@ -114,9 +117,13 @@ class OnAppvCD_Cron_Hourly extends OnAppvCD_Cron {
 					`username`
 				FROM
 					`tbladmins`
+                WHERE
+                    disabled = 0
 				LIMIT 1';
 		$res   = mysql_query( $qry );
-		$admin = mysql_result( $res, 0 );
+		//$admin = mysql_result( $res, 0 );
+        $adminArr = mysql_fetch_assoc( $res );
+        $admin = $adminArr['username'];
 
 		$command                 = 'addcredit';
 		$values[ 'clientid' ]    = $client[ 'WHMCSUserID' ];
