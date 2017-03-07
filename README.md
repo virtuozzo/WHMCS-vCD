@@ -197,6 +197,9 @@ For testing you should setup statistics collector (or run it from console) and r
 # test invoices for previous month
 /usr/bin/php -q {WHMCS}/modules/servers/OnAppvCD/cronjobs/test-invoices.php -l
 
+# test invoices for previous month for WHMCS user id = XXXX
+/usr/bin/php -q {WHMCS}/modules/servers/OnAppvCD/cronjobs/test-invoices.php -l -whmcsuserid=XXXX
+
 # test invoices for current month
 /usr/bin/php -q {WHMCS}/modules/servers/OnAppvCD/cronjobs/test-invoices.php -l --since='2017-01-10 00:00'
 

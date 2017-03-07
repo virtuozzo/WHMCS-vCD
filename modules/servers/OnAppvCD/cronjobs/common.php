@@ -19,6 +19,7 @@ abstract class OnAppvCD_Cron {
     protected $userGroup2costData = array();
     protected $monthlyBillsMonth = 0;
     protected $monthlyBillsYear = 0;
+    protected $whmcsuserid  = -1;
 
     abstract protected function run();
 
@@ -262,6 +263,7 @@ abstract class OnAppvCD_Cron {
     }
 
     protected function getClients() {
+        $certainWHMCSUser = ($this->whmcsuserid != -1) ? 'AND tblclients.id = ' . $this->whmcsuserid : '';
         $sql = 'SELECT
 					tblclients.taxexempt,
 					tblclients.state,
@@ -298,6 +300,7 @@ abstract class OnAppvCD_Cron {
 					tblcurrencies.id = tblclients.currency
 				WHERE
 					tblhosting.domainstatus IN ( "Active", "Suspended" )
+					' . $certainWHMCSUser . '
 				ORDER BY
 					`OnAppvCD_Users`.`OnAppUserID`';
 
@@ -520,6 +523,11 @@ abstract class OnAppvCD_Cron {
                 'description' => 'print data to screen',
                 'short'       => 'p',
             ),
+            'whmcsuserid' => array(
+                'description' => 'generate invoice for a certain whmcs user',
+                'validation'  => '^(\d{1,})$',
+                'short'       => 'u',
+            ),
         );
 
         $options = new SOP( $options );
@@ -532,6 +540,10 @@ abstract class OnAppvCD_Cron {
         if ( isset( $this->cliOptions->print ) ) {
             $this->printEnabled = true;
         }
+        if( isset( $this->cliOptions->whmcsuserid ) ) {
+            $this->whmcsuserid = $this->cliOptions->whmcsuserid;
+        }
+
     }
 
     private function writeLog() {
