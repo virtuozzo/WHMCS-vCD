@@ -163,7 +163,7 @@ Add the following command to your cronjobs:
 
 ```bash
 # run invoice generator at 01:00 on the first day of each month
-0 0 1 * *    /usr/bin/php -q {WHMCS}/modules/servers/onappusers/cronjobs/generate-invoices.php
+0 0 1 * *    /usr/bin/php -q {WHMCS}/modules/servers/OnAppvCD/cronjobs/generate-invoices.php
 ```
 
 *{WHMCS} is the full path to your WHMCS directory.*
