@@ -17,8 +17,11 @@ if( file_exists( ONAPP_WRAPPER_INIT ) ) {
 }
 
 class OnAppvCDModule {
-	const MODULE_VERSION = '0.3';
-	const MODULE_NAME    = 'OnAppvCD';
+    const MODULE_VERSION = '0.3';
+    const MODULE_NAME = 'OnAppvCD';
+    const ATTEMPTS_TO_DELETE = 15;
+    const MINIMUM_WRAPPER_VERSION = 5.4;
+
 	private $server;
 	private $moneyFormat;
 
@@ -385,5 +388,77 @@ class OnAppvCDModule {
 
         return is_null( $obj->getErrorsAsArray() );
     }
-	
+
+    public function deleteAllByClassNameAndVDCSId( $className, $vdcsId ) {
+        $errorMsg = "";
+        $obj  = $this->getObject( $className );
+        $list = $obj->getList();
+
+        $idsToDelete = array();
+        foreach ( $list as $item ) {
+            if ( $item->_vdc_id == $vdcsId ) {
+                $idsToDelete[] = $item->_id;
+            }
+        }
+
+        foreach ( $idsToDelete as $id ) {
+            $errorMsg .= $this->deleteObject($className, $id);
+        }
+        return $errorMsg;
+    }
+
+    public function deleteObject( $className, $id ) {
+        $errorMsg = "";
+
+	    $obj      = $this->getObject( $className );
+        $obj->_id = $id;
+        $obj->delete( true );
+
+        if ( ! is_null( $obj->getErrorsAsArray() ) ) {
+            $errorMsg = $obj->getErrorsAsString( ', ' ) . '; ';
+            logModuleCall( self::MODULE_NAME, 'delete failed', "", $errorMsg );
+
+            return $errorMsg;
+        }
+
+        $n = 0;
+        while ( $this->checkObject( $className, $id ) ) {
+            $n ++;
+            if ( $n > self::ATTEMPTS_TO_DELETE ) {
+                $errorMsg = 'can not delete ' . $className . '; id=' . $id;
+                break;
+            }
+            sleep( 5 );
+        }
+        if ( $errorMsg != '' ) {
+            logModuleCall( self::MODULE_NAME, 'delete failed', "", $errorMsg );
+            return $errorMsg;
+        }
+        sleep( 5 );
+
+        return '';
+    }
+
+    public function clearUserGroupResources( $userGroupId ) {
+        $errorMsg = "";
+	    $OnAppVDCS      = $this->getObject( 'VDCS' );
+        $OnAppVDCSes    = $OnAppVDCS->getList();
+
+        $vdcsesToDelete = array();
+        foreach ( $OnAppVDCSes as $vdcs ) {
+            if ( $vdcs->user_group_id == $userGroupId ) {
+                $vdcsesToDelete[] = $vdcs->_id;
+            }
+        }
+
+        foreach ( $vdcsesToDelete as $vdcsId ) {
+            $errorMsg .= $this->deleteAllByClassNameAndVDCSId('VDCS_EdgeGateway', $vdcsId);
+            $errorMsg .= $this->deleteAllByClassNameAndVDCSId('OrgNetwork', $vdcsId);
+            $errorMsg .= $this->deleteObject('VDCS', $vdcsId);
+        }
+
+        return $errorMsg;
+
+    }
+
 }

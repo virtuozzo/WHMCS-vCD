@@ -3,9 +3,10 @@
 
 >Before installing the WHMCS Module for OnApp with vCloud Director, please ensure that you meet the following requirements:
 >
-> * WHMCS 6.2+ and 7+ [[Requirements](http://docs.whmcs.com/System_Requirements)] [[Installation](http://docs.whmcs.com/Installing_WHMCS)]
+> * WHMCS 6.2+ [[Requirements](http://docs.whmcs.com/System_Requirements)] [[Installation](http://docs.whmcs.com/Installing_WHMCS)]
 > * OnApp 4.2+ with vCloud Director Integration
-> * PHP 5.4+ 
+> * [OnApp-PHP-Wrapper-External](https://github.com/OnApp/OnApp-PHP-Wrapper-External) 5.4+
+ 
 
 ## Installation
 

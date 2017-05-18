@@ -19,6 +19,16 @@
 		<span class="oeu-error">{$error}</span>
 	</div>
 {else}
+    {if $warning}
+        <div class="errorbox">
+            <strong>
+                <span class="title">
+                    {$lang->WarningTitle}
+                </span>
+            </strong><br>
+            <span class="oeu-error">{$warning}</span>
+        </div>
+    {/if}
 	<table class="form oeu" width="100%" border="0" cellspacing="2" cellpadding="3">
 		<!-- server -->
 		<tr>

@@ -65,11 +65,15 @@ function OnAppvCD_ConfigOptions() {
             //compare wrapper version with API
 			$compareResult = $module->checkWrapperVersion();
 			if( !$compareResult['status'] ){
-				$data->error = $data->lang->WrapperUpdate . ' (wrapper version: ' . $compareResult['wrapperVersion'] . '; ' . 'api version: ' . $compareResult['apiVersion'] . ')';
+                $data->error = $data->lang->WrapperUpdate . ' (wrapper version: ' . $compareResult['wrapperVersion'] . '; ' . 'api version: ' . $compareResult['apiVersion'] . ')';
                 if($compareResult['apiMessage'] != ''){
                     $data->error .= '; ' . $compareResult['apiMessage'];
                 }
                 goto end;
+            }
+
+            if ( $compareResult['wrapperVersion'] < OnAppvCDModule::MINIMUM_WRAPPER_VERSION ) {
+                $data->warning = $data->lang->MinimumWrapperVersionWarning;
             }
 
 			$data->servers->{$serverConfig->id}       = $module->getData();
@@ -123,61 +127,67 @@ function OnAppvCD_CreateAccount( $params ) {
 													 ->select( 'value' )
 													 ->first();
         $label = $labelVal->value;
-		$userGroup                          = $module->getObject( 'UserGroup' );
-		$userGroup->label                   = $label;
-		$userGroup->assign_to_vcloud        = true;
-		$userGroup->hypervisor_id           = $productSettings->HyperVisor;
-		$userGroup->company_billing_plan_id = $productSettings->BillingPlanDefault;
-        $userGroup->billing_plan_ids        = $productSettings->GroupBillingPlans;
-		$userGroup->save();
-		$userGroup = $userGroup->id;
+
+        $userGroupObj                          = $module->getObject( 'UserGroup' );
+        $userGroupObj->label                   = $label;
+        $userGroupObj->assign_to_vcloud        = true;
+        $userGroupObj->hypervisor_id           = $productSettings->HyperVisor;
+        $userGroupObj->company_billing_plan_id = $productSettings->BillingPlanDefault;
+        $userGroupObj->billing_plan_ids        = $productSettings->GroupBillingPlans;
+        $userGroupObj->save();
+
+		$userGroup = $userGroupObj->id;
 
         $n        = 0;
         $attempts = 10;
         while ( ! $module->checkObject( 'UserGroup', $userGroup ) ) {
             $n++;
             if ( $n > $attempts ) {
-                return $lang->Error_CreateUser;
+                $errorMsg = $lang->Error_CreateUserGroup . ': ';
+                $errorMsg .= $userGroupObj->getErrorsAsString( ', ' );
+
+                return $errorMsg;
             }
             sleep( 1 );
         }
+        sleep( 5 );
 	}
 
-	$OnAppUser                   = $module->getObject( 'User' );
-	$OnAppUser->_email           = $clientsDetails[ 'email' ];
-	$OnAppUser->_password        = $OnAppUser->_password_confirmation = $password;
-	$OnAppUser->_login           = $userName;
-	$OnAppUser->_first_name      = $clientsDetails[ 'firstname' ];
-	$OnAppUser->_last_name       = $clientsDetails[ 'lastname' ];
+	$onAppUser                   = $module->getObject( 'User' );
+	$onAppUser->_email           = $clientsDetails[ 'email' ];
+	$onAppUser->_password        = $onAppUser->_password_confirmation = $password;
+	$onAppUser->_login           = $userName;
+	$onAppUser->_first_name      = $clientsDetails[ 'firstname' ];
+	$onAppUser->_last_name       = $clientsDetails[ 'lastname' ];
     if ( $productSettings->OrganizationType == 1 ) {
-        $OnAppUser->_billing_plan_id = $productSettings->BillingPlanDefault;
+        $onAppUser->_billing_plan_id = $productSettings->BillingPlanDefault;
     } else {
         if ( is_array( $productSettings->GroupBillingPlans ) && count( $productSettings->GroupBillingPlans ) > 0 ) {
-            $OnAppUser->_billing_plan_id = $productSettings->GroupBillingPlans[0];
+            $onAppUser->_billing_plan_id = $productSettings->GroupBillingPlans[0];
         }
     }
-	$OnAppUser->_role_ids        = $productSettings->Roles;
-	$OnAppUser->_time_zone       = $productSettings->TimeZone;
-	$OnAppUser->_user_group_id   = $userGroup;
-	$OnAppUser->_locale          = $productSettings->Locale;
+	$onAppUser->_role_ids        = $productSettings->Roles;
+	$onAppUser->_time_zone       = $productSettings->TimeZone;
+	$onAppUser->_user_group_id   = $userGroup;
+	$onAppUser->_locale          = $productSettings->Locale;
 
-	$OnAppUser->save();
+	$onAppUser->save();
 
-	if( ! is_null( $OnAppUser->getErrorsAsArray() ) ) {
+	if( ! is_null( $onAppUser->getErrorsAsArray() ) ) {
 		$errorMsg = $lang->Error_CreateUser . ': ';
-		$errorMsg .= $OnAppUser->getErrorsAsString( ', ' );
+		$errorMsg .= $onAppUser->getErrorsAsString( ', ' );
 
 		return $errorMsg;
 	}
 
-	if( ! is_null( $OnAppUser->_obj->getErrorsAsArray() ) ) {
+	if( ! is_null( $onAppUser->_obj->getErrorsAsArray() ) ) {
 		$errorMsg = $lang->Error_CreateUser . ': ';
-		$errorMsg .= $OnAppUser->_obj->getErrorsAsString( ', ' );
+		$errorMsg .= $onAppUser->_obj->getErrorsAsString( ', ' );
 
 		return $errorMsg;
 	}
 
-	if( is_null( $OnAppUser->_obj->_id ) ) {
+	if( is_null( $onAppUser->_obj->_id ) ) {
 		return $lang->Error_CreateUser;
 	}
 
@@ -186,7 +196,7 @@ function OnAppvCD_CreateAccount( $params ) {
 		   ->insert( [
 			   'serviceID'   => $params[ 'serviceid' ],
 			   'WHMCSUserID' => $params[ 'userid' ],
-			   'OnAppUserID' => $OnAppUser->_obj->_id,
+			   'OnAppUserID' => $onAppUser->_obj->_id,
 			   'serverID'    => $params[ 'serverid' ],
 			   'billingType' => $productSettings->BillingType,
 		   ] );
@@ -206,47 +216,112 @@ function OnAppvCD_CreateAccount( $params ) {
 }
 
 function OnAppvCD_TerminateAccount( $params ) {
-	$module    = new OnAppvCDModule( $params );
-	$tableName = $module::MODULE_NAME . '_Users';
-	$lang      = $module->loadLang()->Admin;
+    $module    = new OnAppvCDModule( $params );
+    $tableName = $module::MODULE_NAME . '_Users';
+    $lang      = $module->loadLang()->Admin;
 
-	$serviceID = $params[ 'serviceid' ];
-	$clientID  = $params[ 'clientsdetails' ][ 'userid' ];
-	$serverID  = $params[ 'serverid' ];
+    $serviceID = $params[ 'serviceid' ];
+    $clientID  = $params[ 'clientsdetails' ][ 'userid' ];
+    $serverID  = $params[ 'serverid' ];
 
-	$OnAppUserIDVal = Capsule::table( $tableName )
-						  ->where( 'serverID', $serverID )
-						  ->where( 'serviceID', $serviceID )
-						  ->select( 'OnAppUserID' )
-						  ->first();
-    $OnAppUserID = $OnAppUserIDVal->OnAppUserID;
+    $onAppUserIDVal = Capsule::table( $tableName )
+                             ->where( 'serverID', $serverID )
+                             ->where( 'serviceID', $serviceID )
+                             ->select( 'OnAppUserID' )
+                             ->first();
+    $onAppUserID = $onAppUserIDVal->OnAppUserID;
 
-	if( ! $OnAppUserID ) {
-		return sprintf( $lang->Error_UserNotFound, $clientID, $serverID );
-	}
+    if( ! $onAppUserID ) {
+        return sprintf( $lang->Error_UserNotFound, $clientID, $serverID );
+    }
 
-	$module         = new OnAppvCDModule( $params );
-	$OnAppUser      = $module->getObject( 'User' );
-	$OnAppUser->_id = $OnAppUserID;
-	$OnAppUser->delete( true );
+    if ( $params['configoption7'] == 1 ) {
+        //single user
+        $module         = new OnAppvCDModule( $params );
+        $onAppUser      = $module->getObject( 'User' );
+        $onAppUser->_id = $onAppUserID;
+        $onAppUser->delete();
 
-	if( ! empty( $OnAppUser->error ) ) {
-		$errorMsg = $lang->Error_TerminateUser . ': ';
-		$errorMsg .= $OnAppUser->getErrorsAsString( ', ' );
+        if ( ! empty( $onAppUser->error ) ) {
+            $errorMsg = $lang->Error_TerminateUser . ': ';
+            $errorMsg .= $onAppUser->getErrorsAsString( ', ' );
 
-		return $errorMsg;
-	}
-	else {
-		Capsule::table( $tableName )
-			   ->where( 'serverID', $serverID )
-			   ->where( 'serviceID', $serviceID )
-			   ->delete();
-	}
+            return $errorMsg;
+        } else {
+            Capsule::table( $tableName )
+                   ->where( 'serverID', $serverID )
+                   ->where( 'serviceID', $serviceID )
+                   ->delete();
+        }
 
-	// todo rename subject
-	sendmessage( 'OnApp account has been terminated', $serviceID );
+    } else {
+        //multiple orgs
 
-	return 'success';
+        # get user group name
+        $labelVal      = Capsule::table( 'tblcustomfieldsvalues' )
+                                ->where( 'relid', $serviceID )
+                                ->select( 'value' )
+                                ->first();
+        $userGroupName = trim( $labelVal->value );
+
+        $module    = new OnAppvCDModule( $params );
+        $onAppUser = $module->getObject( 'User' );
+        $onAppUser           = $onAppUser->load( $onAppUserID );
+
+        $userGroupIdToDelete = $onAppUser->_user_group_id;
+
+        $onAppUserGroup = $module->getObject( 'UserGroup' );
+        $onAppUserGroup = $onAppUserGroup->load( $userGroupIdToDelete );
+
+        if ( ( $userGroupName == '' ) || ( $onAppUserGroup->_label != $userGroupName ) || ( $onAppUserGroup->_id != $userGroupIdToDelete ) ) {
+            return $lang->Error_FailedToTerminate;
+        }
+
+        $errorMsg = $module->clearUserGroupResources($userGroupIdToDelete);
+        if ( $errorMsg != '' ) {
+            logModuleCall( OnAppvCDModule::MODULE_NAME, 'Terminate Account error', "Service Id : " . $serverID, $errorMsg );
+
+            return $errorMsg;
+        }
+
+        $obj      = $module->getObject( 'User' );
+        $userList    = $obj->getList();
+
+        $userIdsToDelete = array();
+        foreach ( $userList as $user ) {
+            if ( $user->user_group_id == $userGroupIdToDelete ) {
+                $userIdsToDelete[] = $user->_id;
+            }
+        }
+
+        $errorMsg = '';
+        foreach ( $userIdsToDelete as $userIdToDelete ) {
+            $errorMsg .= $module->deleteObject('User', $userIdToDelete);
+        }
+
+        if ( $errorMsg != '' ) {
+            logModuleCall( OnAppvCDModule::MODULE_NAME, 'Terminate Account error', "Service Id : " . $serverID, $errorMsg );
+
+            return $errorMsg;
+        }
+
+        Capsule::table( $tableName )
+               ->where( 'serverID', $serverID )
+               ->where( 'serviceID', $serviceID )
+               ->delete();
+
+        $errorMsg .= $module->deleteObject('UserGroup', $userGroupIdToDelete);
+        if ( $errorMsg != '' ) {
+            logModuleCall( OnAppvCDModule::MODULE_NAME, 'Terminate Account error', "Service Id : " . $serverID, $errorMsg );
+
+            return $errorMsg;
+        }
+    }
+
+    // todo rename subject
+    sendmessage( 'OnApp account has been terminated', $serviceID );
+
+    return 'success';
 }
 
 function OnAppvCD_SuspendAccount( $params ) {
@@ -258,23 +333,23 @@ function OnAppvCD_SuspendAccount( $params ) {
 	$clientID  = $params[ 'clientsdetails' ][ 'userid' ];
 	$serviceID = $params[ 'serviceid' ];
 
-    $OnAppUserIDVal = Capsule::table( $tableName )
+    $onAppUserIDVal = Capsule::table( $tableName )
 						  ->where( 'serverID', $serverID )
 						  ->where( 'serviceID', $serviceID )
 						  ->select( 'OnAppUserID' )
 						  ->first();
-    $OnAppUserID = $OnAppUserIDVal->OnAppUserID;
+    $onAppUserID = $onAppUserIDVal->OnAppUserID;
 
-	if( ! $OnAppUserID ) {
+	if( ! $onAppUserID ) {
 		return sprintf( $lang->Error_UserNotFound, $clientID, $serverID );
 	}
 
-	$OnAppUser      = $module->getObject( 'User' );
-	$OnAppUser->_id = $OnAppUserID;
-	$OnAppUser->suspend();
-	if( ! is_null( $OnAppUser->error ) ) {
+	$onAppUser      = $module->getObject( 'User' );
+	$onAppUser->_id = $onAppUserID;
+	$onAppUser->suspend();
+	if( ! is_null( $onAppUser->error ) ) {
 		$errorMsg = $lang->Error_SuspendUser . ':<br/>';
-		$errorMsg .= $OnAppUser->getErrorsAsString( '<br/>' );
+		$errorMsg .= $onAppUser->getErrorsAsString( '<br/>' );
 
 		return $errorMsg;
 	}
@@ -294,26 +369,26 @@ function OnAppvCD_UnsuspendAccount( $params ) {
 	$clientID  = $params[ 'clientsdetails' ][ 'userid' ];
 	$serviceID = $params[ 'serviceid' ];
 
-    $OnAppUserIDVal = Capsule::table( $tableName )
+    $onAppUserIDVal = Capsule::table( $tableName )
 						  ->where( 'serverID', $serverID )
 						  ->where( 'serviceID', $serviceID )
 						  ->select( 'OnAppUserID' )
 						  ->first();
-    $OnAppUserID = $OnAppUserIDVal->OnAppUserID;
+    $onAppUserID = $onAppUserIDVal->OnAppUserID;
 
-	if( ! $OnAppUserID ) {
+	if( ! $onAppUserID ) {
 		return sprintf( $lang->Error_UserNotFound, $clientID, $serverID );
 	}
 
-	$OnAppUser = $module->getObject( 'User' );
+	$onAppUser = $module->getObject( 'User' );
 	$unset     = [ 'time_zone', 'user_group_id', 'locale' ];
-	$OnAppUser->unsetFields( $unset );
-	$OnAppUser->_id = $OnAppUserID;
-	$OnAppUser->activate_user();
+	$onAppUser->unsetFields( $unset );
+	$onAppUser->_id = $onAppUserID;
+	$onAppUser->activate_user();
 
-	if( ! is_null( $OnAppUser->error ) ) {
+	if( ! is_null( $onAppUser->error ) ) {
 		$errorMsg = $lang->Error_UnsuspendUser . ':<br/>';
-		$errorMsg .= $OnAppUser->getErrorsAsString( '<br/>' );
+		$errorMsg .= $onAppUser->getErrorsAsString( '<br/>' );
 
 		return $errorMsg;
 	}
@@ -405,20 +480,20 @@ function OnAppvCD_AdminServicesTabFields( $params ) {
 function OnAppvCD_AdminServicesTabFieldsSave( $params ) {
 	if( $_POST[ OnAppvCDModule::MODULE_NAME . '_Prev' ] === 'null' ) {
 		$module        = new OnAppvCDModule( $params );
-		$OnAppUser     = $module->getObject( 'User' );
-		$OnAppUser->id = $_POST[ $module::MODULE_NAME ][ 'OnAppUserID' ];
-		$OnAppUser     = $OnAppUser->load();
+		$onAppUser     = $module->getObject( 'User' );
+		$onAppUser->id = $_POST[ $module::MODULE_NAME ][ 'OnAppUserID' ];
+		$onAppUser     = $onAppUser->load();
 
-		if( ! is_null( $OnAppUser->error ) ) {
+		if( ! is_null( $onAppUser->error ) ) {
 			$lang     = $module->loadLang()->Admin;
 			$errorMsg = $lang->Error_LinkUser . ":\\n";
-			$errorMsg .= $OnAppUser->getErrorsAsString( "\\n" );
+			$errorMsg .= $onAppUser->getErrorsAsString( "\\n" );
 			echo '<script>alert("' . $errorMsg . '");</script><meta http-equiv="refresh" content="0">';
 			exit;
 		}
 		else {
-			$id    = $OnAppUser->id;
-			$login = $OnAppUser->login;
+			$id    = $onAppUser->id;
+			$login = $onAppUser->login;
 		}
 
 		# save user link
@@ -432,10 +507,10 @@ function OnAppvCD_AdminServicesTabFieldsSave( $params ) {
 			   ] );
 
 		$password            = $module::generatePassword();
-		$OnAppUser           = $module->getObject( 'User' );
-		$OnAppUser->id       = $id;
-		$OnAppUser->password = $password;
-		$OnAppUser->save();
+		$onAppUser           = $module->getObject( 'User' );
+		$onAppUser->id       = $id;
+		$onAppUser->password = $password;
+		$onAppUser->save();
 
 		# save OnApp login and password
 		Capsule::table( 'tblhosting' )
