@@ -18,7 +18,7 @@
 
 	```date.timezone = Europe/London```
 
-2. Download the latest version of the [OnApp PHP Wrapper](https://github.com/OnApp/OnApp-PHP-Wrapper-External/archive/4.2.0.zip)
+2. Download the latest version of the [OnApp PHP Wrapper](https://github.com/OnApp/OnApp-PHP-Wrapper-External/releases/download/v5.4.0/OnApp-PHP-Wrapper-External-5.4.0.zip)
 
 3. Extract the files so they are located in the following directory: ```{WHMCS root}/includes/wrapper```
 	
