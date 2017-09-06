@@ -4,7 +4,8 @@
 <script>OnAppModuleName = '{$moduleName}';</script>
 
 <link href="../modules/servers/{$moduleName}/includes/css/adminArea.css" rel="stylesheet" type="text/css"/>
-<script type="text/javascript" src="../modules/servers/{$moduleName}/includes/js/adminArea.js"></script>
+<script type="text/javascript" src="../modules/servers/{$moduleName}/includes/js/adminArea.js?"></script>
+
 
 <link href="../modules/servers/{$moduleName}/includes/css/chosen/bootstrap-chosen.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/chosen/1.4.2/chosen.jquery.min.js"></script>

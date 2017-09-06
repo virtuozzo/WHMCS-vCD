@@ -25,6 +25,8 @@ class OnAppvCDModule {
 	private $server;
 	private $moneyFormat;
 
+	private $vdcsesByUserGroupId = [];
+
 	public function __construct( $params = null ) {
 		if( $params != null ) {
 			if( is_array( $params ) ) {
@@ -338,7 +340,7 @@ class OnAppvCDModule {
 
         $result = array();
         $result['apiMessage'] = $apiVersionArr['message'];
-        $result['wrapperVersion'] = $wrapperVersion; 
+        $result['wrapperVersion'] = $wrapperVersion;
         $result['apiVersion'] = $apiVersion;
         if(($wrapperVersion == '')||($apiVersion == '')){
             $result['status'] = false;
@@ -378,18 +380,22 @@ class OnAppvCDModule {
         return $result;
 	}
 
-    public function checkObject( $class, $id ) {
+    public function checkObject( $class, $id, $additionalObjParams = [] ) {
         $className = 'OnApp_' . $class;
         $obj       = new $className;
         $obj->auth( $this->server->address, $this->server->user, $this->server->pass );
 
         $obj->id = $id;
+        foreach ( $additionalObjParams as $paramName => $paramVal ) {
+            $obj->{$paramName} = $paramVal;
+        }
         $obj->load();
 
         return is_null( $obj->getErrorsAsArray() );
     }
 
     public function deleteAllByClassNameAndVDCSId( $className, $vdcsId ) {
+        $this->debugLog( 'OnAppvCDmod', __FUNCTION__, 'deleteAllByClassNameAndVDCSId className: ' . $className. "; vdcsId: " . $vdcsId);
         $errorMsg = "";
         $obj  = $this->getObject( $className );
         $list = $obj->getList();
@@ -407,12 +413,64 @@ class OnAppvCDModule {
         return $errorMsg;
     }
 
-    public function deleteObject( $className, $id ) {
+    public function deleteAllByClassNameAndCatalogItemId( $className, $catalogItemId ) {
+        $this->debugLog( 'OnAppvCDmod', __FUNCTION__, 'deleteAllByClassNameAndCatalogItemId className: ' . $className . '; catalogItemId: ' . $catalogItemId);
+        $errorMsg = "";
+        $obj  = $this->getObject( $className );
+        $obj->_catalog_item_id = $catalogItemId;
+        $list = $obj->getList();
+
+        $idsToDelete = array();
+        foreach ( $list as $item ) {
+            $this->debugLog( 'OnAppvCDmod', __FUNCTION__, 'in deleteAllByClassNameAndCatalogItemId idsToDelete: ' . $item->_id);
+            $idsToDelete[] = $item->_id;
+        }
+
+        foreach ( $idsToDelete as $id ) {
+            $errorMsg .= $this->deleteObject($className, $id, ['_catalog_item_id' => $catalogItemId]);
+        }
+        return $errorMsg;
+    }
+
+    public function deleteCatalogsByClassNameAndUserGroupId( $userGroupId ) {
+        $this->debugLog( 'OnAppvCDmod', __FUNCTION__, 'deleteCatalogsByClassNameAndVDCSId userGroupId: ' . $userGroupId);
+        $className = "Catalogs";
+
+        $errorMsg = "";
+        $obj  = $this->getObject( $className );
+        $list = $obj->getList();
+
+        $idsToDelete = array();
+        foreach ( $list as $item ) {
+            if ( $item->_user_group_id == $userGroupId ) {
+                $this->debugLog( 'OnAppvCDmod', __FUNCTION__, 'deleteCatalogsByClassNameAndVDCSId idsToDelete: ' . $item->_id);
+                $idsToDelete[] = $item->_id;
+            }
+        }
+
+        foreach ( $idsToDelete as $id ) {
+            $errorMsg .= $this->deleteAllByClassNameAndCatalogItemId('Catalogs_Media', $id);
+            $errorMsg .= $this->deleteAllByClassNameAndCatalogItemId('Catalogs_VAppTemplates', $id);
+            $errorMsg .= $this->deleteObject($className, $id);
+        }
+        return $errorMsg;
+    }
+
+    public function deleteObject( $className, $id, $additionalObjParams = [], $force = false ) {
+        $this->debugLog( 'OnAppvCDmod', __FUNCTION__, 'deleteObject className: ' . $className . '; id: ' . $id);
+
         $errorMsg = "";
 
 	    $obj      = $this->getObject( $className );
         $obj->_id = $id;
-        $obj->delete( true );
+        foreach ( $additionalObjParams as $paramName => $paramVal ) {
+            $obj->{$paramName} = $paramVal;
+        }
+        if ( $force ) {
+            $obj->delete( true );
+        } else {
+            $obj->delete();
+        }
 
         if ( ! is_null( $obj->getErrorsAsArray() ) ) {
             $errorMsg = $obj->getErrorsAsString( ', ' ) . '; ';
@@ -421,8 +479,11 @@ class OnAppvCDModule {
             return $errorMsg;
         }
 
+        $this->debugLog( 'OnAppvCDmod', __FUNCTION__, 'deleteObject className: ' . $className . '; id: ' . $id . '; status: check');
+
         $n = 0;
-        while ( $this->checkObject( $className, $id ) ) {
+        while ( $this->checkObject( $className, $id, $additionalObjParams ) ) {
+            $this->debugLog( 'OnAppvCDmod', __FUNCTION__, 'deleteObject className: ' . $className . '; id: ' . $id . '; status: wait(' . ( $n ) . ')' );
             $n ++;
             if ( $n > self::ATTEMPTS_TO_DELETE ) {
                 $errorMsg = 'can not delete ' . $className . '; id=' . $id;
@@ -435,30 +496,61 @@ class OnAppvCDModule {
             return $errorMsg;
         }
         sleep( 5 );
+        $this->debugLog( 'OnAppvCDmod', __FUNCTION__, 'deleteObject className: ' . $className . '; id: ' . $id . '; status: deleted' );
 
         return '';
     }
 
-    public function clearUserGroupResources( $userGroupId ) {
-        $errorMsg = "";
-	    $OnAppVDCS      = $this->getObject( 'VDCS' );
-        $OnAppVDCSes    = $OnAppVDCS->getList();
-
-        $vdcsesToDelete = array();
-        foreach ( $OnAppVDCSes as $vdcs ) {
-            if ( $vdcs->user_group_id == $userGroupId ) {
-                $vdcsesToDelete[] = $vdcs->_id;
-            }
+    public function getVDCSesByUserGroupId( $userGroupId ) {
+        if ( isset( $this->vdcsesByUserGroupId[ $userGroupId ] ) ) {
+            return $this->vdcsesByUserGroupId[ $userGroupId ];
         }
 
-        foreach ( $vdcsesToDelete as $vdcsId ) {
+        $OnAppVDCS   = $this->getObject( 'VDCS' );
+        $OnAppVDCSes = $OnAppVDCS->getList();
+
+        $this->vdcsesByUserGroupId[ $userGroupId ] = [];
+        foreach ( $OnAppVDCSes as $vdcs ) {
+            if ( $vdcs->user_group_id == $userGroupId ) {
+                $this->debugLog( 'OnAppvCDmod', __FUNCTION__, 'vdcsesToDelete: ' . $vdcs->_id);
+                $this->vdcsesByUserGroupId[ $userGroupId ][] = $vdcs->_id;
+            }
+        }
+        return $this->vdcsesByUserGroupId[ $userGroupId ];
+    }
+
+    public function clearUserGroupResources( $userGroupId ) {
+        $errorMsg = "";
+
+        $vdcsesToClear = $this->getVDCSesByUserGroupId($userGroupId);
+
+        foreach ( $vdcsesToClear as $vdcsId ) {
             $errorMsg .= $this->deleteAllByClassNameAndVDCSId('VDCS_EdgeGateway', $vdcsId);
             $errorMsg .= $this->deleteAllByClassNameAndVDCSId('OrgNetwork', $vdcsId);
+        }
+
+        $errorMsg .= $this->deleteCatalogsByClassNameAndUserGroupId( $userGroupId );
+
+        return $errorMsg;
+
+    }
+
+    public function deleteVDCSByUserGroupId( $userGroupId ) {
+        $errorMsg = "";
+
+        $vdcsesToDelete = $this->getVDCSesByUserGroupId($userGroupId);
+
+        foreach ( $vdcsesToDelete as $vdcsId ) {
             $errorMsg .= $this->deleteObject('VDCS', $vdcsId);
         }
 
         return $errorMsg;
 
+    }
+
+    public function debugLog( $title, $func, $msg ) {
+	    return;
+        logModuleCall( $title, $func, '', '', $msg );
     }
 
 }

@@ -4,9 +4,34 @@ use Illuminate\Database\Capsule\Manager as Capsule;
 
 require_once __DIR__ . '/includes/php/ModuleWrapper.php';
 
-function initConfigOptionfromDB()
+function OnAppvCD_function_initConfigOption() {
+
+    if ( isset( $_POST['id'] ) ) {
+        $productID = $_POST['id'];
+    } else {
+        $productID = $_GET['id'];
+    }
+
+    $data = Capsule::table( 'tblproducts' )->where( 'servertype', 'OnAppvCD' )->where( 'id', $productID )->get();
+
+    $packageConfigOptions = [
+        'configoption1' => 0,
+    ];
+    if ( is_array( $data ) && count( $data ) > 0 ) {
+        $packageConfigOptions['configoption1'] = $data[0]->configoption1;
+    }
+
+    return $packageConfigOptions;
+}
+
+function OnAppvCD_function_initConfigOptionfromDB($serverId = 0)
 {
-    $data = Capsule::table('tblproducts')->where('servertype', 'OnAppvCD')->get();
+    $data = Capsule::table('tblproducts')->where('servertype', 'OnAppvCD');
+    if ( $serverId ) {
+        $data = $data->where( 'configoption1', $serverId );
+    }
+    $data = $data->get();
+
     $packageconfigoption = [];
     $packageconfigoption[3] = [];
     if (is_array($data) && count($data) > 0) {
@@ -18,53 +43,60 @@ function initConfigOptionfromDB()
     return $packageconfigoption;
 }
 
-function OnAppvCD_ConfigOptions() {
-	$data         = new stdClass;
-	$data->errors = $data->warnings = new stdClass;
-	$module       = new OnAppvCDModule;
-	$data->lang   = $module->loadLang()->Admin;
+function OnAppvCD_ConfigOptions($params) {
+    $data         = new stdClass;
+    $data->errors = $data->warnings = new stdClass;
+    $module       = new OnAppvCDModule;
+    $data->lang   = $module->loadLang()->Admin;
 
-	if( ! file_exists( ONAPP_WRAPPER_INIT ) ) {
-		$data->error = $data->lang->WrapperNotFound . ' ' . ROOTDIR . '/includes/wrapper';
-		goto end;
-	}
+    if( ! file_exists( ONAPP_WRAPPER_INIT ) ) {
+        $data->error = $data->lang->WrapperNotFound . ' ' . ROOTDIR . '/includes/wrapper';
+        goto end;
+    }
 
-	$serverGroup = $GLOBALS[ 'servergroup' ];
-	/** @var WHMCS_OnApp_Server[] $servers */
-	$servers = Capsule::table( 'tblservers AS srv' )
-					  ->leftJoin( 'tblservergroupsrel AS rel', 'srv.id', '=', 'rel.serverid' )
-					  ->leftJoin( 'tblservergroups AS grp', 'grp.id', '=', 'rel.groupid' )
-					  ->where( 'srv.type', OnAppvCDModule::MODULE_NAME )
-					  ->where( 'grp.id', $serverGroup )
-					  ->where( 'srv.disabled', 0 )
-					  ->select(
-						  'srv.id',
-						  'srv.name',
-						  'srv.ipaddress',
-						  'srv.secure',
-						  'srv.hostname',
-						  'srv.username',
-						  'srv.password'
-					  )
-					  ->get();
+    //$ar = $GLOBALS;
+    $packageConfigOptions = OnAppvCD_function_initConfigOption();
+    $serverId = $packageConfigOptions['configoption1'];
 
-	if( empty( $servers ) ) {
-		$data->error = $data->lang->ServersNone;
-	}
-	else {
-		$data->servers = new stdClass;
-		foreach( $servers as $serverConfig ) {
-			# error if server IP or hostname are not set
-			if( empty( $serverConfig->ipaddress ) && empty( $serverConfig->hostname ) ) {
-				$data->error .= $serverConfig->name . ': ' . $data->lang->HostAddressNotFound . PHP_EOL;
-				continue;
-			}
-			$serverConfig->password = decrypt( $serverConfig->password );
-			$module                 = new OnAppvCDModule( $serverConfig );
+    $serverGroup = $GLOBALS[ 'servergroup' ];
+    /** @var WHMCS_OnApp_Server[] $servers */
+    $servers = Capsule::table( 'tblservers AS srv' )
+                      ->leftJoin( 'tblservergroupsrel AS rel', 'srv.id', '=', 'rel.serverid' )
+                      ->leftJoin( 'tblservergroups AS grp', 'grp.id', '=', 'rel.groupid' )
+                      ->where( 'srv.type', OnAppvCDModule::MODULE_NAME )
+                      ->where( 'grp.id', $serverGroup )
+                      ->where( 'srv.disabled', 0 )
+                      ->select(
+                          'srv.id',
+                          'srv.name',
+                          'srv.ipaddress',
+                          'srv.secure',
+                          'srv.hostname',
+                          'srv.username',
+                          'srv.password'
+                      )
+                      ->get();
+
+    if( empty( $servers ) ) {
+        $data->error = $data->lang->ServersNone;
+    }
+    else {
+        $data->servers = new stdClass;
+        foreach( $servers as $serverConfig ) {
+            if ( ! $serverId ) {
+                $serverId = $serverConfig->id;
+            }
+            # error if server IP or hostname are not set
+            if( empty( $serverConfig->ipaddress ) && empty( $serverConfig->hostname ) ) {
+                $data->error .= $serverConfig->name . ': ' . $data->lang->HostAddressNotFound . PHP_EOL;
+                continue;
+            }
+            $serverConfig->password = decrypt( $serverConfig->password );
+            $module                 = new OnAppvCDModule( $serverConfig );
 
             //compare wrapper version with API
-			$compareResult = $module->checkWrapperVersion();
-			if( !$compareResult['status'] ){
+            $compareResult = $module->checkWrapperVersion();
+            if( !$compareResult['status'] ){
                 $data->error = $data->lang->WrapperUpdate . ' (wrapper version: ' . $compareResult['wrapperVersion'] . '; ' . 'api version: ' . $compareResult['apiVersion'] . ')';
                 if($compareResult['apiMessage'] != ''){
                     $data->error .= '; ' . $compareResult['apiMessage'];
@@ -76,56 +108,56 @@ function OnAppvCD_ConfigOptions() {
                 $data->warning = $data->lang->MinimumWrapperVersionWarning;
             }
 
-			$data->servers->{$serverConfig->id}       = $module->getData();
-			$data->servers->{$serverConfig->id}->Name = $serverConfig->name;
-		}
+            $data->servers->{$serverConfig->id}       = $module->getData();
+            $data->servers->{$serverConfig->id}->Name = $serverConfig->name;
+        }
 
-		if( $data->servers ) {
-			# get additional data
-			$data->TimeZones      = file_get_contents( __DIR__ . '/includes/php/tzs.json' );
-			$data->TimeZones      = json_decode( $data->TimeZones );
+        if( $data->servers ) {
+            # get additional data
+            $data->TimeZones      = file_get_contents( __DIR__ . '/includes/php/tzs.json' );
+            $data->TimeZones      = json_decode( $data->TimeZones );
 
-			$data->productOptions = initConfigOptionfromDB();
-			if( ! ( empty( $data->productOptions[ 1 ] ) || empty( $data->productOptions[ 24 ] ) ) ) {
-				$data->productSettings     = json_decode( $data->productOptions[ 24 ] )->{$data->productOptions[ 1 ]};
+            $data->productOptions = OnAppvCD_function_initConfigOptionfromDB($serverId);
+            if( ! ( empty( $data->productOptions[ 1 ] ) || empty( $data->productOptions[ 24 ] ) ) ) {
+                $data->productSettings     = json_decode( $data->productOptions[ 24 ] )->{$data->productOptions[ 1 ]};
 
-				$data->productSettingsJSON = htmlspecialchars( $data->productOptions[ 24 ] );
-			}
-		}
-	}
+                $data->productSettingsJSON = htmlspecialchars( $data->productOptions[ 24 ] );
+            }
+        }
+    }
 
-	end: {
-		return [
-			'' => [
-				'Description' => $module->buildHTML( $data ),
-			],
-		];
-	}
+    end: {
+        return [
+            '' => [
+                'Description' => $module->buildHTML( $data ),
+            ],
+        ];
+    }
 }
 
 function OnAppvCD_CreateAccount( $params ) {
-	$module = new OnAppvCDModule( $params );
-	$lang   = $module->loadLang()->Admin;
-	if( ! file_exists( ONAPP_WRAPPER_INIT ) ) {
-		return $lang->Error_WrapperNotFound . realpath( ROOTDIR ) . '/includes';
-	}
+    $module = new OnAppvCDModule( $params );
+    $lang   = $module->loadLang()->Admin;
+    if( ! file_exists( ONAPP_WRAPPER_INIT ) ) {
+        return $lang->Error_WrapperNotFound . realpath( ROOTDIR ) . '/includes';
+    }
 
-	$clientsDetails  = $params[ 'clientsdetails' ];
-	$serviceID       = $params[ 'serviceid' ];
-	$serverID        = $params[ 'serverid' ];
-	$userName        = $clientsDetails[ 'email' ];
-	$password        = OnAppvCDModule::generatePassword();
-	$productSettings = json_decode( $params[ 'configoption24' ] )->$serverID;
+    $clientsDetails  = $params[ 'clientsdetails' ];
+    $serviceID       = $params[ 'serviceid' ];
+    $serverID        = $params[ 'serverid' ];
+    $userName        = $clientsDetails[ 'email' ];
+    $password        = OnAppvCDModule::generatePassword();
+    $productSettings = json_decode( $params[ 'configoption24' ] )->$serverID;
 
-	if( $productSettings->OrganizationType == 1 ) {
-		$userGroup = $productSettings->UserGroups;
-	}
-	else {
-		# create user group // todo add error handling and dupe title
-		$labelVal                           = Capsule::table( 'tblcustomfieldsvalues' )
-													 ->where( 'relid', $serviceID )
-													 ->select( 'value' )
-													 ->first();
+    if( $productSettings->OrganizationType == 1 ) {
+        $userGroup = $productSettings->UserGroups;
+    }
+    else {
+        # create user group // todo add error handling and dupe title
+        $labelVal                           = Capsule::table( 'tblcustomfieldsvalues' )
+                                                     ->where( 'relid', $serviceID )
+                                                     ->select( 'value' )
+                                                     ->first();
         $label = $labelVal->value;
 
         $userGroupObj                          = $module->getObject( 'UserGroup' );
@@ -136,7 +168,7 @@ function OnAppvCD_CreateAccount( $params ) {
         $userGroupObj->billing_plan_ids        = $productSettings->GroupBillingPlans;
         $userGroupObj->save();
 
-		$userGroup = $userGroupObj->id;
+        $userGroup = $userGroupObj->id;
 
         $n        = 0;
         $attempts = 10;
@@ -151,14 +183,14 @@ function OnAppvCD_CreateAccount( $params ) {
             sleep( 1 );
         }
         sleep( 5 );
-	}
+    }
 
-	$onAppUser                   = $module->getObject( 'User' );
-	$onAppUser->_email           = $clientsDetails[ 'email' ];
-	$onAppUser->_password        = $onAppUser->_password_confirmation = $password;
-	$onAppUser->_login           = $userName;
-	$onAppUser->_first_name      = $clientsDetails[ 'firstname' ];
-	$onAppUser->_last_name       = $clientsDetails[ 'lastname' ];
+    $onAppUser                   = $module->getObject( 'User' );
+    $onAppUser->_email           = $clientsDetails[ 'email' ];
+    $onAppUser->_password        = $onAppUser->_password_confirmation = $password;
+    $onAppUser->_login           = $userName;
+    $onAppUser->_first_name      = $clientsDetails[ 'firstname' ];
+    $onAppUser->_last_name       = $clientsDetails[ 'lastname' ];
     if ( $productSettings->OrganizationType == 1 ) {
         $onAppUser->_billing_plan_id = $productSettings->BillingPlanDefault;
     } else {
@@ -166,53 +198,53 @@ function OnAppvCD_CreateAccount( $params ) {
             $onAppUser->_billing_plan_id = $productSettings->GroupBillingPlans[0];
         }
     }
-	$onAppUser->_role_ids        = $productSettings->Roles;
-	$onAppUser->_time_zone       = $productSettings->TimeZone;
-	$onAppUser->_user_group_id   = $userGroup;
-	$onAppUser->_locale          = $productSettings->Locale;
+    $onAppUser->_role_ids        = $productSettings->Roles;
+    $onAppUser->_time_zone       = $productSettings->TimeZone;
+    $onAppUser->_user_group_id   = $userGroup;
+    $onAppUser->_locale          = $productSettings->Locale;
 
-	$onAppUser->save();
+    $onAppUser->save();
 
-	if( ! is_null( $onAppUser->getErrorsAsArray() ) ) {
-		$errorMsg = $lang->Error_CreateUser . ': ';
-		$errorMsg .= $onAppUser->getErrorsAsString( ', ' );
+    if( ! is_null( $onAppUser->getErrorsAsArray() ) ) {
+        $errorMsg = $lang->Error_CreateUser . ': ';
+        $errorMsg .= $onAppUser->getErrorsAsString( ', ' );
 
-		return $errorMsg;
-	}
+        return $errorMsg;
+    }
 
-	if( ! is_null( $onAppUser->_obj->getErrorsAsArray() ) ) {
-		$errorMsg = $lang->Error_CreateUser . ': ';
-		$errorMsg .= $onAppUser->_obj->getErrorsAsString( ', ' );
+    if( ! is_null( $onAppUser->_obj->getErrorsAsArray() ) ) {
+        $errorMsg = $lang->Error_CreateUser . ': ';
+        $errorMsg .= $onAppUser->_obj->getErrorsAsString( ', ' );
 
-		return $errorMsg;
-	}
+        return $errorMsg;
+    }
 
-	if( is_null( $onAppUser->_obj->_id ) ) {
-		return $lang->Error_CreateUser;
-	}
+    if( is_null( $onAppUser->_obj->_id ) ) {
+        return $lang->Error_CreateUser;
+    }
 
-	# save user link
-	Capsule::table( $module::MODULE_NAME . '_Users' )
-		   ->insert( [
-			   'serviceID'   => $params[ 'serviceid' ],
-			   'WHMCSUserID' => $params[ 'userid' ],
-			   'OnAppUserID' => $onAppUser->_obj->_id,
-			   'serverID'    => $params[ 'serverid' ],
-			   'billingType' => $productSettings->BillingType,
-		   ] );
+    # save user link
+    Capsule::table( $module::MODULE_NAME . '_Users' )
+           ->insert( [
+               'serviceID'   => $params[ 'serviceid' ],
+               'WHMCSUserID' => $params[ 'userid' ],
+               'OnAppUserID' => $onAppUser->_obj->_id,
+               'serverID'    => $params[ 'serverid' ],
+               'billingType' => $productSettings->BillingType,
+           ] );
 
-	# save OnApp login and password
-	Capsule::table( 'tblhosting' )
-		   ->where( 'id', $serviceID )
-		   ->update( [
-			   'password' => encrypt( $password ),
-			   'username' => $userName,
-		   ] );
+    # save OnApp login and password
+    Capsule::table( 'tblhosting' )
+           ->where( 'id', $serviceID )
+           ->update( [
+               'password' => encrypt( $password ),
+               'username' => $userName,
+           ] );
 
-	// todo rename subject
-	sendmessage( 'OnApp account has been created', $serviceID );
+    // todo rename subject
+    sendmessage( 'OnApp account has been created', $serviceID );
 
-	return 'success';
+    return 'success';
 }
 
 function OnAppvCD_TerminateAccount( $params ) {
@@ -277,6 +309,9 @@ function OnAppvCD_TerminateAccount( $params ) {
             return $lang->Error_FailedToTerminate;
         }
 
+        //delete UserGroup Resources
+
+        $module->debugLog( 'OnAppvCDmod', __FUNCTION__, 'userGroupIdToDelete: ' . $userGroupIdToDelete);
         $errorMsg = $module->clearUserGroupResources($userGroupIdToDelete);
         if ( $errorMsg != '' ) {
             logModuleCall( OnAppvCDModule::MODULE_NAME, 'Terminate Account error', "Service Id : " . $serverID, $errorMsg );
@@ -284,6 +319,8 @@ function OnAppvCD_TerminateAccount( $params ) {
             return $errorMsg;
         }
 
+
+        //delete users
         $obj      = $module->getObject( 'User' );
         $userList    = $obj->getList();
 
@@ -291,12 +328,14 @@ function OnAppvCD_TerminateAccount( $params ) {
         foreach ( $userList as $user ) {
             if ( $user->user_group_id == $userGroupIdToDelete ) {
                 $userIdsToDelete[] = $user->_id;
+                $module->debugLog( 'OnAppvCDmod', __FUNCTION__,'userIdsToDelete: ' . $user->_id);
             }
         }
 
         $errorMsg = '';
         foreach ( $userIdsToDelete as $userIdToDelete ) {
-            $errorMsg .= $module->deleteObject('User', $userIdToDelete);
+            $module->debugLog( 'OnAppvCDmod', __FUNCTION__, 'delete user id: ' . $userIdToDelete);
+            $errorMsg .= $module->deleteObject('User', $userIdToDelete, [], true);
         }
 
         if ( $errorMsg != '' ) {
@@ -305,6 +344,11 @@ function OnAppvCD_TerminateAccount( $params ) {
             return $errorMsg;
         }
 
+        //delete vdcses
+        $errorMsg .= $module->deleteVDCSByUserGroupId( $userGroupIdToDelete );
+
+        //clear WHMCS DB
+        $module->debugLog( 'OnAppvCDmod', __FUNCTION__, 'clear WHMCS DB' );
         Capsule::table( $tableName )
                ->where( 'serverID', $serverID )
                ->where( 'serviceID', $serviceID )
@@ -316,6 +360,7 @@ function OnAppvCD_TerminateAccount( $params ) {
 
             return $errorMsg;
         }
+
     }
 
     // todo rename subject
@@ -325,223 +370,223 @@ function OnAppvCD_TerminateAccount( $params ) {
 }
 
 function OnAppvCD_SuspendAccount( $params ) {
-	$module    = new OnAppvCDModule( $params );
-	$tableName = $module::MODULE_NAME . '_Users';
-	$lang      = $module->loadLang()->Admin;
+    $module    = new OnAppvCDModule( $params );
+    $tableName = $module::MODULE_NAME . '_Users';
+    $lang      = $module->loadLang()->Admin;
 
-	$serverID  = $params[ 'serverid' ];
-	$clientID  = $params[ 'clientsdetails' ][ 'userid' ];
-	$serviceID = $params[ 'serviceid' ];
+    $serverID  = $params[ 'serverid' ];
+    $clientID  = $params[ 'clientsdetails' ][ 'userid' ];
+    $serviceID = $params[ 'serviceid' ];
 
     $onAppUserIDVal = Capsule::table( $tableName )
-						  ->where( 'serverID', $serverID )
-						  ->where( 'serviceID', $serviceID )
-						  ->select( 'OnAppUserID' )
-						  ->first();
+                             ->where( 'serverID', $serverID )
+                             ->where( 'serviceID', $serviceID )
+                             ->select( 'OnAppUserID' )
+                             ->first();
     $onAppUserID = $onAppUserIDVal->OnAppUserID;
 
-	if( ! $onAppUserID ) {
-		return sprintf( $lang->Error_UserNotFound, $clientID, $serverID );
-	}
+    if( ! $onAppUserID ) {
+        return sprintf( $lang->Error_UserNotFound, $clientID, $serverID );
+    }
 
-	$onAppUser      = $module->getObject( 'User' );
-	$onAppUser->_id = $onAppUserID;
-	$onAppUser->suspend();
-	if( ! is_null( $onAppUser->error ) ) {
-		$errorMsg = $lang->Error_SuspendUser . ':<br/>';
-		$errorMsg .= $onAppUser->getErrorsAsString( '<br/>' );
+    $onAppUser      = $module->getObject( 'User' );
+    $onAppUser->_id = $onAppUserID;
+    $onAppUser->suspend();
+    if( ! is_null( $onAppUser->error ) ) {
+        $errorMsg = $lang->Error_SuspendUser . ':<br/>';
+        $errorMsg .= $onAppUser->getErrorsAsString( '<br/>' );
 
-		return $errorMsg;
-	}
+        return $errorMsg;
+    }
 
-	// todo rename subject
-	sendmessage( 'OnApp account has been suspended', $serviceID );
+    // todo rename subject
+    sendmessage( 'OnApp account has been suspended', $serviceID );
 
-	return 'success';
+    return 'success';
 }
 
 function OnAppvCD_UnsuspendAccount( $params ) {
-	$module    = new OnAppvCDModule( $params );
-	$tableName = $module::MODULE_NAME . '_Users';
-	$lang      = $module->loadLang()->Admin;
+    $module    = new OnAppvCDModule( $params );
+    $tableName = $module::MODULE_NAME . '_Users';
+    $lang      = $module->loadLang()->Admin;
 
-	$serverID  = $params[ 'serverid' ];
-	$clientID  = $params[ 'clientsdetails' ][ 'userid' ];
-	$serviceID = $params[ 'serviceid' ];
+    $serverID  = $params[ 'serverid' ];
+    $clientID  = $params[ 'clientsdetails' ][ 'userid' ];
+    $serviceID = $params[ 'serviceid' ];
 
     $onAppUserIDVal = Capsule::table( $tableName )
-						  ->where( 'serverID', $serverID )
-						  ->where( 'serviceID', $serviceID )
-						  ->select( 'OnAppUserID' )
-						  ->first();
+                             ->where( 'serverID', $serverID )
+                             ->where( 'serviceID', $serviceID )
+                             ->select( 'OnAppUserID' )
+                             ->first();
     $onAppUserID = $onAppUserIDVal->OnAppUserID;
 
-	if( ! $onAppUserID ) {
-		return sprintf( $lang->Error_UserNotFound, $clientID, $serverID );
-	}
+    if( ! $onAppUserID ) {
+        return sprintf( $lang->Error_UserNotFound, $clientID, $serverID );
+    }
 
-	$onAppUser = $module->getObject( 'User' );
-	$unset     = [ 'time_zone', 'user_group_id', 'locale' ];
-	$onAppUser->unsetFields( $unset );
-	$onAppUser->_id = $onAppUserID;
-	$onAppUser->activate_user();
+    $onAppUser = $module->getObject( 'User' );
+    $unset     = [ 'time_zone', 'user_group_id', 'locale' ];
+    $onAppUser->unsetFields( $unset );
+    $onAppUser->_id = $onAppUserID;
+    $onAppUser->activate_user();
 
-	if( ! is_null( $onAppUser->error ) ) {
-		$errorMsg = $lang->Error_UnsuspendUser . ':<br/>';
-		$errorMsg .= $onAppUser->getErrorsAsString( '<br/>' );
+    if( ! is_null( $onAppUser->error ) ) {
+        $errorMsg = $lang->Error_UnsuspendUser . ':<br/>';
+        $errorMsg .= $onAppUser->getErrorsAsString( '<br/>' );
 
-		return $errorMsg;
-	}
+        return $errorMsg;
+    }
 
-	// todo rename subject
-	sendmessage( 'OnApp account has been unsuspended', $serviceID );
+    // todo rename subject
+    sendmessage( 'OnApp account has been unsuspended', $serviceID );
 
-	return 'success';
+    return 'success';
 }
 
 function OnAppvCD_ClientArea( $params = '' ) {
 
-	if( isset( $_GET[ 'modop' ] ) && ( $_GET[ 'modop' ] == 'custom' ) ) {
-		if( isset( $_GET[ 'a' ] ) ) {
-			$functionName = OnAppvCDModule::MODULE_NAME . '_Custom_' . $_GET[ 'a' ];
-			if( function_exists( $functionName ) ) {
-				$functionName( $params );
-			}
-			else {
-				echo $functionName;
-				exit( PHP_EOL . ' die at ' . __LINE__ . ' in ' . __FILE__ );
-			}
-		}
-	}
+    if( isset( $_GET[ 'modop' ] ) && ( $_GET[ 'modop' ] == 'custom' ) ) {
+        if( isset( $_GET[ 'a' ] ) ) {
+            $functionName = OnAppvCDModule::MODULE_NAME . '_Custom_' . $_GET[ 'a' ];
+            if( function_exists( $functionName ) ) {
+                $functionName( $params );
+            }
+            else {
+                echo $functionName;
+                exit( PHP_EOL . ' die at ' . __LINE__ . ' in ' . __FILE__ );
+            }
+        }
+    }
 
 
-	$data         = new stdClass;
-	$module       = new OnAppvCDModule( $params );
-	$data->lang   = $module->loadLang()->Client;
-	$data->jsLang = json_encode( $data->lang );
-	$data->params = json_decode( json_encode( $params ) );
+    $data         = new stdClass;
+    $module       = new OnAppvCDModule( $params );
+    $data->lang   = $module->loadLang()->Client;
+    $data->jsLang = json_encode( $data->lang );
+    $data->params = json_decode( json_encode( $params ) );
 
 
-	# server form
-	$server = $params[ 'serverhttpprefix' ] . '://' . ( $params[ 'serverhostname' ] ?: $params[ 'serverip' ] );
-	$tmp    = [
-		'login'    => $params[ 'username' ],
-		'password' => $params[ 'password' ],
-		'server'   => $server,
-	];
-	$tmp    = json_encode( $tmp ) . '%%%';
+    # server form
+    $server = $params[ 'serverhttpprefix' ] . '://' . ( $params[ 'serverhostname' ] ?: $params[ 'serverip' ] );
+    $tmp    = [
+        'login'    => $params[ 'username' ],
+        'password' => $params[ 'password' ],
+        'server'   => $server,
+    ];
+    $tmp    = json_encode( $tmp ) . '%%%';
 
-	$iv_size                = mcrypt_get_iv_size( MCRYPT_RIJNDAEL_256, MCRYPT_MODE_ECB );
-	$iv                     = mcrypt_create_iv( $iv_size, MCRYPT_RAND );
-	$key                    = substr( md5( uniqid( rand( 1, 999999 ), true ) ), 0, 32 );
-	$crypttext              = mcrypt_encrypt( MCRYPT_RIJNDAEL_256, $key, $tmp, MCRYPT_MODE_ECB, $iv );
-	$_SESSION[ 'utk' ]      = [
-		$key . substr( md5( uniqid( rand( 1, 999999 ), true ) ), rand( 0, 26 ), 5 ),
-		base64_encode( base64_encode( $crypttext ) ),
-	];
+    $iv_size                = mcrypt_get_iv_size( MCRYPT_RIJNDAEL_256, MCRYPT_MODE_ECB );
+    $iv                     = mcrypt_create_iv( $iv_size, MCRYPT_RAND );
+    $key                    = substr( md5( uniqid( rand( 1, 999999 ), true ) ), 0, 32 );
+    $crypttext              = mcrypt_encrypt( MCRYPT_RIJNDAEL_256, $key, $tmp, MCRYPT_MODE_ECB, $iv );
+    $_SESSION[ 'utk' ]      = [
+        $key . substr( md5( uniqid( rand( 1, 999999 ), true ) ), rand( 0, 26 ), 5 ),
+        base64_encode( base64_encode( $crypttext ) ),
+    ];
 
-	$data->token            = md5( uniqid( rand( 1, 999999 ), true ) );
-	$data->serverURL        = $server;
-	$data->organizationType = $params[ 'configoption7' ];
-	$data->additional       = Capsule::table( OnAppvCDModule::MODULE_NAME . '_Users' )
-									 ->where( 'serviceID', $params[ 'serviceid' ] )
-									 ->first();
+    $data->token            = md5( uniqid( rand( 1, 999999 ), true ) );
+    $data->serverURL        = $server;
+    $data->organizationType = $params[ 'configoption7' ];
+    $data->additional       = Capsule::table( OnAppvCDModule::MODULE_NAME . '_Users' )
+                                     ->where( 'serviceID', $params[ 'serviceid' ] )
+                                     ->first();
 
 
-	return $module->buildHTML( $data, 'clientArea/main.tpl' );
+    return $module->buildHTML( $data, 'clientArea/main.tpl' );
 }
 
 function OnAppvCD_AdminLink( $params ) {
-	$data       = new stdClass;
-	$module     = new OnAppvCDModule;
-	$data->lang = $module->loadLang()->Admin;
-	# open CP button
-	$form = '<form target="_blank" action="' . $params[ 'serverhttpprefix' ] . '://' . ( $params[ 'serverhostname' ] ?: $params[ 'serverip' ] ) . '/users/sign_in" method="post">
-	  <input type="hidden" name="user[login]" value="' . $params[ 'serverusername' ] . '">
-	  <input type="hidden" name="user[password]" value="' . $params[ 'serverpassword' ] . '">
-	  <input type="hidden" name="commit" value="Sign In" />
-	  <input type="submit" value="' . $data->lang->LoginToCP . '" class="btn btn-default">
+    $data       = new stdClass;
+    $module     = new OnAppvCDModule;
+    $data->lang = $module->loadLang()->Admin;
+    # open CP button
+    $form = '<form target="_blank" action="' . $params[ 'serverhttpprefix' ] . '://' . ( $params[ 'serverhostname' ] ?: $params[ 'serverip' ] ) . '/users/sign_in" method="post">
+      <input type="hidden" name="user[login]" value="' . $params[ 'serverusername' ] . '">
+      <input type="hidden" name="user[password]" value="' . $params[ 'serverpassword' ] . '">
+      <input type="hidden" name="commit" value="Sign In" />
+      <input type="submit" value="' . $data->lang->LoginToCP . '" class="btn btn-default">
    </form>';
 
-	return $form;
+    return $form;
 }
 
 function OnAppvCD_AdminServicesTabFields( $params ) {
-	$data = Capsule::table( OnAppvCDModule::MODULE_NAME . '_Users' )
-				   ->where( 'serviceID', $params[ 'serviceid' ] )
-				   ->first();
+    $data = Capsule::table( OnAppvCDModule::MODULE_NAME . '_Users' )
+                   ->where( 'serviceID', $params[ 'serviceid' ] )
+                   ->first();
 
-	$fields[ 'OnApp user ID' ] = '<input type="text" value="' . $data->OnAppUserID . '" name="' . OnAppvCDModule::MODULE_NAME . '[OnAppUserID]">';
-	$fields[ 'OnApp user ID' ] .= '<input type="hidden" name="' . OnAppvCDModule::MODULE_NAME . '_Prev" value="' . htmlentities( json_encode( $data ) ) . '">';
+    $fields[ 'OnApp user ID' ] = '<input type="text" value="' . $data->OnAppUserID . '" name="' . OnAppvCDModule::MODULE_NAME . '[OnAppUserID]">';
+    $fields[ 'OnApp user ID' ] .= '<input type="hidden" name="' . OnAppvCDModule::MODULE_NAME . '_Prev" value="' . htmlentities( json_encode( $data ) ) . '">';
 
-	return $fields;
+    return $fields;
 }
 
 function OnAppvCD_AdminServicesTabFieldsSave( $params ) {
-	if( $_POST[ OnAppvCDModule::MODULE_NAME . '_Prev' ] === 'null' ) {
-		$module        = new OnAppvCDModule( $params );
-		$onAppUser     = $module->getObject( 'User' );
-		$onAppUser->id = $_POST[ $module::MODULE_NAME ][ 'OnAppUserID' ];
-		$onAppUser     = $onAppUser->load();
+    if( $_POST[ OnAppvCDModule::MODULE_NAME . '_Prev' ] === 'null' ) {
+        $module        = new OnAppvCDModule( $params );
+        $onAppUser     = $module->getObject( 'User' );
+        $onAppUser->id = $_POST[ $module::MODULE_NAME ][ 'OnAppUserID' ];
+        $onAppUser     = $onAppUser->load();
 
-		if( ! is_null( $onAppUser->error ) ) {
-			$lang     = $module->loadLang()->Admin;
-			$errorMsg = $lang->Error_LinkUser . ":\\n";
-			$errorMsg .= $onAppUser->getErrorsAsString( "\\n" );
-			echo '<script>alert("' . $errorMsg . '");</script><meta http-equiv="refresh" content="0">';
-			exit;
-		}
-		else {
-			$id    = $onAppUser->id;
-			$login = $onAppUser->login;
-		}
+        if( ! is_null( $onAppUser->error ) ) {
+            $lang     = $module->loadLang()->Admin;
+            $errorMsg = $lang->Error_LinkUser . ":\\n";
+            $errorMsg .= $onAppUser->getErrorsAsString( "\\n" );
+            echo '<script>alert("' . $errorMsg . '");</script><meta http-equiv="refresh" content="0">';
+            exit;
+        }
+        else {
+            $id    = $onAppUser->id;
+            $login = $onAppUser->login;
+        }
 
-		# save user link
-		Capsule::table( OnAppvCDModule::MODULE_NAME . '_Users' )
-			   ->insert( [
-				   'serviceID'   => $params[ 'serviceid' ],
-				   'WHMCSUserID' => $params[ 'userid' ],
-				   'OnAppUserID' => $id,
-				   'serverID'    => $params[ 'serverid' ],
-				   'billingType' => $params[ 'configoption2' ],
-			   ] );
+        # save user link
+        Capsule::table( OnAppvCDModule::MODULE_NAME . '_Users' )
+               ->insert( [
+                   'serviceID'   => $params[ 'serviceid' ],
+                   'WHMCSUserID' => $params[ 'userid' ],
+                   'OnAppUserID' => $id,
+                   'serverID'    => $params[ 'serverid' ],
+                   'billingType' => $params[ 'configoption2' ],
+               ] );
 
-		$password            = $module::generatePassword();
-		$onAppUser           = $module->getObject( 'User' );
-		$onAppUser->id       = $id;
-		$onAppUser->password = $password;
-		$onAppUser->save();
+        $password            = $module::generatePassword();
+        $onAppUser           = $module->getObject( 'User' );
+        $onAppUser->id       = $id;
+        $onAppUser->password = $password;
+        $onAppUser->save();
 
-		# save OnApp login and password
-		Capsule::table( 'tblhosting' )
-			   ->where( 'id', $params[ 'serviceid' ] )
-			   ->update( [
-				   'password' => encrypt( $password ),
-				   'username' => $login,
-			   ] );
-	}
-	else {
-		$prev = json_decode( html_entity_decode( $_POST[ OnAppvCDModule::MODULE_NAME . '_Prev' ] ) );
-		# check server change
-		if( $prev->serverID != $_POST[ 'server' ] ) {
-			$_POST[ OnAppvCDModule::MODULE_NAME ][ 'serverID' ] = $_POST[ 'server' ];
-		}
+        # save OnApp login and password
+        Capsule::table( 'tblhosting' )
+               ->where( 'id', $params[ 'serviceid' ] )
+               ->update( [
+                   'password' => encrypt( $password ),
+                   'username' => $login,
+               ] );
+    }
+    else {
+        $prev = json_decode( html_entity_decode( $_POST[ OnAppvCDModule::MODULE_NAME . '_Prev' ] ) );
+        # check server change
+        if( $prev->serverID != $_POST[ 'server' ] ) {
+            $_POST[ OnAppvCDModule::MODULE_NAME ][ 'serverID' ] = $_POST[ 'server' ];
+        }
 
-		Capsule::table( OnAppvCDModule::MODULE_NAME . '_Users' )
-			   ->where( 'id', $prev->id )
-			   ->update( $_POST[ OnAppvCDModule::MODULE_NAME ] );
-	}
+        Capsule::table( OnAppvCDModule::MODULE_NAME . '_Users' )
+               ->where( 'id', $prev->id )
+               ->update( $_POST[ OnAppvCDModule::MODULE_NAME ] );
+    }
 }
 
 function OnAppvCD_Custom_OutstandingDetails( $params = '' ) {
-	$module = new OnAppvCDModule;
-	$data = $module->getAmount( $params );
-	if( $data ) {
-		header( 'Content-Type: application/json; charset=utf-8' );
-		echo json_encode( $data );
-	}
-	else {
-		header( 'HTTP/1.1 404 No Data Found' );
-	}
-	exit;
+    $module = new OnAppvCDModule;
+    $data = $module->getAmount( $params );
+    if( $data ) {
+        header( 'Content-Type: application/json; charset=utf-8' );
+        echo json_encode( $data );
+    }
+    else {
+        header( 'HTTP/1.1 404 No Data Found' );
+    }
+    exit;
 }
