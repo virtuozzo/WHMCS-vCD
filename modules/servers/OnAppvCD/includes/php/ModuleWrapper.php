@@ -525,8 +525,8 @@ class OnAppvCDModule {
         $vdcsesToClear = $this->getVDCSesByUserGroupId($userGroupId);
 
         foreach ( $vdcsesToClear as $vdcsId ) {
-            $errorMsg .= $this->deleteAllByClassNameAndVDCSId('VDCS_EdgeGateway', $vdcsId);
             $errorMsg .= $this->deleteAllByClassNameAndVDCSId('OrgNetwork', $vdcsId);
+            $errorMsg .= $this->deleteAllByClassNameAndVDCSId('VDCS_EdgeGateway', $vdcsId);
         }
 
         $errorMsg .= $this->deleteCatalogsByClassNameAndUserGroupId( $userGroupId );
