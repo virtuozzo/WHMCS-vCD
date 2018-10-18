@@ -164,8 +164,10 @@ function OnAppvCD_CreateAccount( $params ) {
         $userGroupObj->label                   = $label;
         $userGroupObj->assign_to_vcloud        = true;
         $userGroupObj->hypervisor_id           = $productSettings->HyperVisor;
-        $userGroupObj->company_billing_plan_id = $productSettings->BillingPlanDefault;
-        $userGroupObj->billing_plan_ids        = $productSettings->GroupBillingPlans;
+        $row_company_billing_plan_id           = $module->getRow( 'company_billing_plan_id' );
+        $userGroupObj->{$row_company_billing_plan_id} = $productSettings->BillingPlanDefault;
+        $row_billing_plan_ids                  = $module->getRow( 'billing_plan_ids' );
+        $userGroupObj->{$row_billing_plan_ids} = $productSettings->GroupBillingPlans;
         $userGroupObj->save();
 
         $userGroup = $userGroupObj->id;
@@ -191,11 +193,12 @@ function OnAppvCD_CreateAccount( $params ) {
     $onAppUser->_login           = $userName;
     $onAppUser->_first_name      = $clientsDetails[ 'firstname' ];
     $onAppUser->_last_name       = $clientsDetails[ 'lastname' ];
+    $row_billing_plan_id         = $module->getRow( '_billing_plan_id' );
     if ( $productSettings->OrganizationType == 1 ) {
-        $onAppUser->_billing_plan_id = $productSettings->BillingPlanDefault;
+        $onAppUser->{$row_billing_plan_id} = $productSettings->BillingPlanDefault;
     } else {
         if ( is_array( $productSettings->GroupBillingPlans ) && count( $productSettings->GroupBillingPlans ) > 0 ) {
-            $onAppUser->_billing_plan_id = $productSettings->GroupBillingPlans[0];
+            $onAppUser->{$row_billing_plan_id} = $productSettings->GroupBillingPlans[0];
         }
     }
     $onAppUser->_role_ids        = $productSettings->Roles;
@@ -476,13 +479,19 @@ function OnAppvCD_ClientArea( $params = '' ) {
     ];
     $tmp    = json_encode( $tmp ) . '%%%';
 
-    $iv_size                = mcrypt_get_iv_size( MCRYPT_RIJNDAEL_256, MCRYPT_MODE_ECB );
-    $iv                     = mcrypt_create_iv( $iv_size, MCRYPT_RAND );
-    $key                    = substr( md5( uniqid( rand( 1, 999999 ), true ) ), 0, 32 );
-    $crypttext              = mcrypt_encrypt( MCRYPT_RIJNDAEL_256, $key, $tmp, MCRYPT_MODE_ECB, $iv );
+    $key = substr(md5(uniqid(rand(1, 999999), true)), 0, 32);
+
+    if (function_exists('mcrypt_get_iv_size')) {
+        $iv = mcrypt_create_iv(mcrypt_get_iv_size(MCRYPT_RIJNDAEL_256, MCRYPT_MODE_ECB), MCRYPT_RAND);
+        $cryptText = mcrypt_encrypt(MCRYPT_RIJNDAEL_256, $key, $tmp, MCRYPT_MODE_ECB, $iv);
+    } else {
+        $iv = openssl_random_pseudo_bytes(openssl_cipher_iv_length('aes-256-cbc'));
+        $cryptText = $iv . openssl_encrypt($tmp, 'aes-256-cbc', $key, 0, $iv);
+    }
+
     $_SESSION[ 'utk' ]      = [
         $key . substr( md5( uniqid( rand( 1, 999999 ), true ) ), rand( 0, 26 ), 5 ),
-        base64_encode( base64_encode( $crypttext ) ),
+        base64_encode( base64_encode( $cryptText ) ),
     ];
 
     $data->token            = md5( uniqid( rand( 1, 999999 ), true ) );

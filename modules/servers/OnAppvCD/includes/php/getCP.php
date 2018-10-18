@@ -7,11 +7,20 @@ if( ! isset( $_POST[ 'authenticity_token' ] ) ) {
 $root = dirname( dirname( dirname( dirname( dirname( dirname( $_SERVER[ 'SCRIPT_FILENAME' ] ) ) ) ) ) ) . DIRECTORY_SEPARATOR;
 require $root . 'init.php';
 
-$iv_size = mcrypt_get_iv_size( MCRYPT_RIJNDAEL_256, MCRYPT_MODE_ECB );
-$iv = mcrypt_create_iv( $iv_size, MCRYPT_RAND );
-$key = substr( $_SESSION[ 'utk' ][ 0 ], 0, 32 );
-$crypttext = mcrypt_decrypt( MCRYPT_RIJNDAEL_256, $key, base64_decode( base64_decode( $_SESSION[ 'utk' ][ 1 ] ) ), MCRYPT_MODE_ECB, $iv );
-$data = explode( '%%%', $crypttext );
+$key = substr($_SESSION['utk'][0], 0, 32);
+$encryptedData = base64_decode(base64_decode($_SESSION['utk'][1]));
+
+if (function_exists('mcrypt_get_iv_size')) {
+    $iv = mcrypt_create_iv(mcrypt_get_iv_size(MCRYPT_RIJNDAEL_256, MCRYPT_MODE_ECB), MCRYPT_RAND);
+    $cryptText = mcrypt_decrypt(MCRYPT_RIJNDAEL_256, $key, $encryptedData, MCRYPT_MODE_ECB, $iv);
+} else {
+    $ivLen = openssl_cipher_iv_length('aes-256-cbc');
+    $iv = substr($encryptedData, 0, $ivLen);
+    $encryptedData = substr($encryptedData, $ivLen);
+    $cryptText = openssl_decrypt($encryptedData, 'aes-256-cbc', $key, 0, $iv);
+}
+
+$data = explode( '%%%', $cryptText );
 
 if( count( $data ) != 2 ) {
 	exit( 'Corrupted data!' );

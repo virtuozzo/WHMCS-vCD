@@ -66,14 +66,34 @@ class OnAppvCDModule {
 	}
 
 	public function getBillingPlans() {
-        if( $this->getAPIVersion() > 5.1 ){
-            $data = $this->getObject( 'BillingUser' )->getList();
-        } else {
-            $data = $this->getObject( 'BillingPlan' )->getList();
-        }
-
-		return $this->buildArray( $data );
+            $apiVersionArr = $this->getAPIVersion();
+            $apiVersion = $apiVersionArr['version'];
+            if ( $apiVersion > 5.5 ) {
+                $data = $this->getObject( 'BillingBucket' )->getList();
+            } elseif ( $apiVersion > 5.1 ){
+                $data = $this->getObject( 'BillingUser' )->getList();
+            } else {
+                $data = $this->getObject( 'BillingPlan' )->getList();
+            }
+            
+            return $this->buildArray( $data );
 	}
+        
+        public function getRow( $row ){
+            $result = $row;
+            $rows = [
+                'company_billing_plan_id'   => 'bucket_id',
+                'billing_plan_ids'          => 'user_buckets',
+                '_billing_plan_id'          => '_bucket_id',
+            ];
+            $apiVersionArr = $this->getAPIVersion();
+            $apiVersion = $apiVersionArr['version'];
+            if ( $apiVersion > 5.5 && array_key_exists($row, $rows) ) {
+                $result = $rows[$row];
+            }
+
+            return $result;
+        }
 
 	public function BillingCompanyPlans() {
 		$data = $this->getObject( 'BillingCompany' )->getList();
@@ -82,12 +102,16 @@ class OnAppvCDModule {
 	}
 
 	public function getLocales() {
-		$tmp = [ ];
+		$tmp = array();
 		foreach( $this->getObject( 'Locale' )->getList() as $locale ) {
 			if( empty( $locale->name ) ) {
 				continue;
 			}
-			$tmp[ $locale->code ] = $locale->name;
+			$index = $locale->code ? $locale->code : $locale->name;
+			$tmp[ $index ] = $locale->name;
+		}
+		if (!isset($tmp['en'])) {
+			$tmp['en'] = 'en';
 		}
 
 		return $tmp;
