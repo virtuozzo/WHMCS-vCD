@@ -36,8 +36,7 @@ class OnAppvCD_Cron_Invoices extends OnAppvCD_Cron {
 				continue;
 			}
 
-
-			if( $clientAmount->total_cost > 0 ) {
+			if( $this->getTotalCost($clientAmount) > 0 ) {
 				$data = $this->generateInvoiceData( $clientAmount, $client );
 				if( $data == false ) {
 					continue;
@@ -84,7 +83,7 @@ class OnAppvCD_Cron_Invoices extends OnAppvCD_Cron {
 					$values = [
 						'itemID' => $result[ 'invoiceid' ],
 						'type'   => 'invoiceData',
-						'data'   => $this->dataTMP->total_cost
+						'data'   => $this->getTotalCost($this->dataTMP)
 					];
 					insert_query( $table, $values );
 				}

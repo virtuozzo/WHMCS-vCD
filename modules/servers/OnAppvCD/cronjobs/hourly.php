@@ -78,7 +78,7 @@ class OnAppvCD_Cron_Hourly extends OnAppvCD_Cron {
 
 			$data = $this->getResourcesData( $client, $date )->user_stat;
 
-			if( $data->total_cost == 0 ) {
+			if( $this->getTotalCost($data) == 0 ) {
 				continue;
 			}
 
@@ -104,10 +104,10 @@ class OnAppvCD_Cron_Hourly extends OnAppvCD_Cron {
 			$qry = str_replace( ':serverID', $client[ 'serverID' ], $qry );
 			$qry = str_replace( ':startDate', $date[ 'period[startdate]' ], $qry );
 			$qry = str_replace( ':endDate', $date[ 'period[enddate]' ], $qry );
-			$qry = str_replace( ':cost', $data->total_cost, $qry );
+			$qry = str_replace( ':cost', $this->getTotalCost($data), $qry );
 			$sql[ ]  = $qry;
 
-			$this->chargeClient( $client, $data->total_cost, $date );
+			$this->chargeClient( $client, $this->getTotalCost($data), $date );
 		}
 		return $sql;
 	}

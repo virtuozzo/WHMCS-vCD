@@ -234,14 +234,14 @@ class OnAppvCDModule {
 			}
 
 			$data         = $data->user_stat;
-			$result->cost = $this->formatAmount( $data->total_cost * $rate->rate );
+			$result->cost = $this->formatAmount( $this->getTotalCost($data) * $rate->rate );
 
 			$module = new self( $params );
 			$module = $module->getObject( 'VirtualMachine' );
 			foreach( $data->vm_stats as $vm ) {
 				$tmp           = [
 					'label' => $module->load( $vm->virtual_machine_id )->label,
-					'cost'  => $this->formatAmount( $vm->total_cost * $rate->rate ),
+					'cost'  => $this->formatAmount( $this->getTotalCost($vm) * $rate->rate ),
 				];
 				$result->vms[] = $tmp;
 			}
@@ -577,4 +577,13 @@ class OnAppvCDModule {
         logModuleCall( $title, $func, '', '', $msg );
     }
 
+    protected function getTotalCost($obj)
+    {
+        if (!property_exists($obj, 'total_cost')) {
+            return 0;
+        }
+
+        return property_exists($obj, 'total_cost_with_discount') ?
+            $obj->total_cost_with_discount : $obj->total_cost;
+    }
 }

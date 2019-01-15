@@ -395,22 +395,30 @@ abstract class OnAppvCD_Cron {
             'itemtaxed1'       => $taxed,
         );
 
-        unset( $data->total_cost );
-        $i = 1;
-        foreach ( $data as $key => $value ) {
-            if ( $value > 0 ) {
+        if (property_exists($data, 'total_cost_with_discount')) {
+            $return = array_merge($return, array(
+                'itemdescription2' => $lang->total_cost,
+                'itemamount2' => $data->total_cost_with_discount,
+                'itemtaxed2' => $taxed,
+            ));
+        }else{
+            unset( $data->total_cost );
+            $i = 1;
+            foreach ( $data as $key => $value ) {
+                if ( $value > 0 ) {
 
-                if ( isset( $lang->$key ) ) {
-                    $label = $lang->$key;
-                } else {
-                    $label = $key;
+                    if ( isset( $lang->$key ) ) {
+                        $label = $lang->$key;
+                    } else {
+                        $label = $key;
+                    }
+                    $tmp    = array(
+                        'itemdescription' . ++ $i => $label,
+                        'itemamount' . $i         => $value,
+                        'itemtaxed' . $i          => $taxed,
+                    );
+                    $return = array_merge( $return, $tmp );
                 }
-                $tmp    = array(
-                    'itemdescription' . ++ $i => $label,
-                    'itemamount' . $i         => $value,
-                    'itemtaxed' . $i          => $taxed,
-                );
-                $return = array_merge( $return, $tmp );
             }
         }
 
@@ -568,5 +576,15 @@ abstract class OnAppvCD_Cron {
         if ( $this->logEnabled ) {
             $this->writeLog();
         }
+    }
+
+    protected function getTotalCost($obj)
+    {
+        if (!property_exists($obj, 'total_cost')) {
+            return 0;
+        }
+
+        return property_exists($obj, 'total_cost_with_discount') ?
+            $obj->total_cost_with_discount : $obj->total_cost;
     }
 }

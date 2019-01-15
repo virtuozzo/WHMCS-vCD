@@ -23,7 +23,7 @@ class OnAppvCD_Cron_Invoices_Test extends OnAppvCD_Cron {
 				continue;
 			}
 
-			if( $clientAmount->total_cost > 0 ) {
+			if( $this->getTotalCost($clientAmount) > 0 ) {
 				$data = $this->generateInvoiceData( $clientAmount, $client );
 				if( $data == false ) {
 					continue;
