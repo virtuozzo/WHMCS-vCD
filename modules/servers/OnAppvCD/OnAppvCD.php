@@ -163,6 +163,7 @@ function OnAppvCD_CreateAccount( $params ) {
         $userGroupObj                          = $module->getObject( 'UserGroup' );
         $userGroupObj->label                   = $label;
         $userGroupObj->assign_to_vcloud        = true;
+        $userGroupObj->assign_vcloud_roles     = true;
         $userGroupObj->hypervisor_id           = $productSettings->HyperVisor;
         $row_company_billing_plan_id           = $module->getRow( 'company_billing_plan_id' );
         $userGroupObj->{$row_company_billing_plan_id} = $productSettings->BillingPlanDefault;
