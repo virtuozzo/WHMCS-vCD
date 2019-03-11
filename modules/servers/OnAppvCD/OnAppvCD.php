@@ -150,7 +150,7 @@ function OnAppvCD_CreateAccount( $params ) {
     $productSettings = json_decode( $params[ 'configoption24' ] )->$serverID;
 
     if( $productSettings->OrganizationType == 1 ) {
-        $userGroup = $productSettings->UserGroups;
+        $userGroupID = $productSettings->UserGroups;
     }
     else {
         # create user group // todo add error handling and dupe title
@@ -158,34 +158,18 @@ function OnAppvCD_CreateAccount( $params ) {
                                                      ->where( 'relid', $serviceID )
                                                      ->select( 'value' )
                                                      ->first();
-        $label = $labelVal->value;
 
-        $userGroupObj                          = $module->getObject( 'UserGroup' );
-        $userGroupObj->label                   = $label;
-        $userGroupObj->assign_to_vcloud        = true;
-        $userGroupObj->assign_vcloud_roles     = true;
-        $userGroupObj->hypervisor_id           = $productSettings->HyperVisor;
-        $row_company_billing_plan_id           = $module->getRow( 'company_billing_plan_id' );
-        $userGroupObj->{$row_company_billing_plan_id} = $productSettings->BillingPlanDefault;
-        $row_billing_plan_ids                  = $module->getRow( 'billing_plan_ids' );
-        $userGroupObj->{$row_billing_plan_ids} = $productSettings->GroupBillingPlans;
-        $userGroupObj->save();
-
-        $userGroup = $userGroupObj->id;
-
-        $n        = 0;
-        $attempts = 10;
-        while ( ! $module->checkObject( 'UserGroup', $userGroup ) ) {
-            $n++;
-            if ( $n > $attempts ) {
-                $errorMsg = $lang->Error_CreateUserGroup . ': ';
-                $errorMsg .= $userGroupObj->getErrorsAsString( ', ' );
-
-                return $errorMsg;
-            }
-            sleep( 1 );
+        $createGroupResult = $module->createGroup(
+            $labelVal->value,
+            $productSettings->HyperVisor,
+            $productSettings->BillingPlanDefault,
+            $productSettings->GroupBillingPlans
+        );
+        if ($createGroupResult['errorMsg']) {
+            return $createGroupResult['errorMsg'];
         }
-        sleep( 5 );
+
+        $userGroupID = $createGroupResult['userGroupID'];
     }
 
     $onAppUser                   = $module->getObject( 'User' );
@@ -204,7 +188,7 @@ function OnAppvCD_CreateAccount( $params ) {
     }
     $onAppUser->_role_ids        = $productSettings->Roles;
     $onAppUser->_time_zone       = $productSettings->TimeZone;
-    $onAppUser->_user_group_id   = $userGroup;
+    $onAppUser->_user_group_id   = $userGroupID;
     $onAppUser->_locale          = $productSettings->Locale;
 
     $onAppUser->save();
@@ -358,13 +342,15 @@ function OnAppvCD_TerminateAccount( $params ) {
                ->where( 'serviceID', $serviceID )
                ->delete();
 
-        $errorMsg .= $module->deleteObject('UserGroup', $userGroupIdToDelete);
-        if ( $errorMsg != '' ) {
-            logModuleCall( OnAppvCDModule::MODULE_NAME, 'Terminate Account error', "Service Id : " . $serverID, $errorMsg );
+        //delete group
+        $errorMsg .= $module->deleteGroup($userGroupIdToDelete);
+
+        if ($errorMsg != '') {
+            logModuleCall(OnAppvCDModule::MODULE_NAME, 'Terminate Account error', "Service Id : " . $serverID,
+                $errorMsg);
 
             return $errorMsg;
         }
-
     }
 
     // todo rename subject

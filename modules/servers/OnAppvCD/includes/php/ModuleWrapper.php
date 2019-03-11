@@ -25,6 +25,8 @@ class OnAppvCDModule {
 	private $server;
 	private $moneyFormat;
 
+    private $loadedLangs = [];
+
 	private $vdcsesByUserGroupId = [];
 
 	public function __construct( $params = null ) {
@@ -64,6 +66,136 @@ class OnAppvCDModule {
 
 		return $this->buildArray( $data );
 	}
+
+    private function createUserGroup($label, $hypervisorID, $billingPlanDefault, $groupBillingPlans)
+    {
+        $userGroupObj = $this->getObject('UserGroup');
+        $userGroupObj->label = $label;
+        $userGroupObj->assign_to_vcloud = true;
+        $userGroupObj->assign_vcloud_roles = true;
+        $userGroupObj->hypervisor_id = $hypervisorID;
+        $row_company_billing_plan_id = $this->getRow('company_billing_plan_id');
+        $userGroupObj->{$row_company_billing_plan_id} = $billingPlanDefault;
+        $row_billing_plan_ids = $this->getRow('billing_plan_ids');
+        $userGroupObj->{$row_billing_plan_ids} = $groupBillingPlans;
+        $userGroupObj->save();
+
+        $userGroupID = $userGroupObj->id;
+
+        $n = 0;
+        $attempts = 10;
+        $errorMsg = '';
+        while (!$this->checkObject('UserGroup', $userGroupID)) {
+            $n++;
+            if ($n > $attempts) {
+                $errorMsg = $this->loadLang()->Admin->Error_CreateUserGroup . ': ';
+                $errorMsg .= $userGroupObj->getErrorsAsString(', ');
+
+                return array(
+                    'userGroupID' => 0,
+                    'errorMsg' => $errorMsg
+                );
+            }
+            sleep(1);
+        }
+        sleep(5);
+
+        return array(
+            'userGroupID' => $userGroupID,
+            'errorMsg' => $errorMsg
+        );
+    }
+
+    private function createOrganization($label, $hypervisorID, $userBucketID)
+    {
+        $organizationObj = $this->getObject('Organizations');
+        $organizationObj->_label = $label;
+        $organizationObj->_user_group_id = 0;
+        $organizationObj->_hypervisor_id = $hypervisorID;
+        $organizationObj->_create_user_group = true;
+        $organizationObj->_user_bucket_id = $userBucketID;
+
+        $organizationObj->save();
+
+        if (!$organizationObj->_id) {
+            $errorMsg = $this->loadLang()->Admin->Error_CreateUserGroup . ': ';
+            $errorMsg .= $organizationObj->getErrorsAsString(', ');
+
+            return array(
+                'userGroupID' => 0,
+                'errorMsg' => $errorMsg
+            );
+        }
+        $organizationID = $organizationObj->_id;
+        $userGroupID = $organizationObj->_user_group_id;
+
+        $n = 0;
+        $attempts = 10;
+        $errorMsg = '';
+        while (!$this->checkObject('Organizations', $organizationID)) {
+            $n++;
+            if ($n > $attempts) {
+                $errorMsg = $this->loadLang()->Admin->Error_CreateUserGroup . ': ';
+                $errorMsg .= $organizationObj->getErrorsAsString(', ');
+
+                return array(
+                    'userGroupID' => 0,
+                    'errorMsg' => $errorMsg
+                );
+            }
+            sleep(1);
+        }
+        sleep(5);
+
+        if (!$userGroupID) {
+            $userGroupID = $this->checkIfOrganizationHasUserGroup($organizationID);
+        }
+
+        if (!$userGroupID) {
+            $errorMsg = $this->loadLang()->Admin->Error_CreateUserGroup . ': ';
+            $errorMsg .= $organizationObj->getErrorsAsString(', ');
+
+            return array(
+                'userGroupID' => 0,
+                'errorMsg' => $errorMsg
+            );
+        }
+
+        return array(
+            'userGroupID' => $userGroupID,
+            'errorMsg' => $errorMsg
+        );
+    }
+
+    private function checkIfOrganizationHasUserGroup($organizationID)
+    {
+        $n = 0;
+        $attempts = 10;
+        $userGroupID = 0;
+        while (!$userGroupID) {
+            $organizationObj = $this->getObject('Organizations');
+            $organizationObj->load($organizationID);
+            $userGroupID = $organizationObj->_obj->_user_group_id;
+
+            $n++;
+            if ($n > $attempts) {
+                break;
+            }
+            sleep(1);
+        }
+        sleep(5);
+
+        return $userGroupID;
+    }
+
+    public function createGroup($label, $hypervisorID, $billingPlanDefault, $groupBillingPlans)
+    {
+        if ($this->getAPIVersionNumber() > 5.99) {
+            return $this->createOrganization($label, $hypervisorID, $billingPlanDefault);
+        }
+
+        return $this->createUserGroup($label, $hypervisorID, $billingPlanDefault, $groupBillingPlans);
+    }
 
 	public function getBillingPlans() {
             $apiVersionArr = $this->getAPIVersion();
@@ -201,7 +333,13 @@ class OnAppvCDModule {
 			$languageFile = $languageFileDir . 'english.php';
 		}
 
-		return json_decode( json_encode( require $languageFile ) );
+        if (isset($this->loadedLangs[$languageFile])) {
+            return $this->loadedLangs[$languageFile];
+        }
+
+        $this->loadedLangs[$languageFile] = json_decode(json_encode(require $languageFile));
+
+        return $this->loadedLangs[$languageFile];
 	}
 
 	public function getAmount( array $params ) {
@@ -356,6 +494,13 @@ class OnAppvCDModule {
         );
 	}
 
+    private function getAPIVersionNumber()
+    {
+        $apiVersionArr = $this->getAPIVersion();
+
+        return (float) $apiVersionArr['version'];
+    }
+
 	public function checkWrapperVersion(){
         $wrapperVersion = trim($this->getWrapperVersion());
 
@@ -478,6 +623,54 @@ class OnAppvCDModule {
             $errorMsg .= $this->deleteObject($className, $id);
         }
         return $errorMsg;
+    }
+
+    public function deleteGroup($userGroupIdToDelete)
+    {
+        $errorMsg = '';
+        if ($this->getAPIVersionNumber() > 5.99) {
+            $errorMsg = $this->findAndDeleteOrganizationByUserGroup($userGroupIdToDelete);
+        }
+
+        if ($errorMsg) {
+            return $errorMsg;
+        }
+
+        return $this->deleteObject('UserGroup', $userGroupIdToDelete);
+    }
+
+    public function findAndDeleteOrganizationByUserGroup($userGroupIdToDelete)
+    {
+        $this->debugLog('OnAppvCDmod', __FUNCTION__, 'find and delete an organization by user group');
+        $this->debugLog('OnAppvCDmod', __FUNCTION__, 'userGroupId: ' . $userGroupIdToDelete);
+        $obj = $this->getObject('Organizations');
+        $orgList = $obj->getList();
+
+        $orgIDToDelete = 0;
+        $areThereSeveralOrganizations = false;
+        foreach ($orgList as $org) {
+            if ($org->_user_group_id == $userGroupIdToDelete) {
+                if ($orgIDToDelete) {
+                    $areThereSeveralOrganizations = true;
+
+                    break;
+                }
+                $orgIDToDelete = $org->_id;
+            }
+        }
+        if ($areThereSeveralOrganizations) {
+            $errorMsg = 'there are several organizations for a user group';
+
+            return $errorMsg;
+        }
+
+        if (!$orgIDToDelete) {
+            $errorMsg = 'can not find an organization for a user group';
+
+            return $errorMsg;
+        }
+
+        return $this->deleteObject('Organizations', $orgIDToDelete);
     }
 
     public function deleteObject( $className, $id, $additionalObjParams = [], $force = false ) {
