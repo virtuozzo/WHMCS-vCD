@@ -106,14 +106,25 @@ class OnAppvCDModule {
         );
     }
 
-    private function createOrganization($label, $hypervisorID, $userBucketID)
+    private function updateUserGroup($id, $label, $billingPlanDefault, $groupBillingPlans)
+    {
+        $userGroupObj = $this->getObject('UserGroup');
+        $userGroupObj->_id = $id;
+
+        $userGroupObj->_label = $label;
+        $userGroupObj->_bucket_id = $billingPlanDefault;
+        $userGroupObj->_user_buckets = $groupBillingPlans;
+        $userGroupObj->save();
+    }
+
+    private function createOrganization($label, $hypervisorID, $billingPlanDefault, $groupBillingPlans)
     {
         $organizationObj = $this->getObject('Organizations');
         $organizationObj->_label = $label;
         $organizationObj->_user_group_id = 0;
         $organizationObj->_hypervisor_id = $hypervisorID;
         $organizationObj->_create_user_group = true;
-        $organizationObj->_user_bucket_id = $userBucketID;
+        $organizationObj->_user_bucket_id = $billingPlanDefault;
 
         $organizationObj->save();
 
@@ -161,6 +172,8 @@ class OnAppvCDModule {
             );
         }
 
+        $this->updateUserGroup($userGroupID, $label, $billingPlanDefault, $groupBillingPlans);
+
         return array(
             'userGroupID' => $userGroupID,
             'errorMsg' => $errorMsg
@@ -191,7 +204,7 @@ class OnAppvCDModule {
     public function createGroup($label, $hypervisorID, $billingPlanDefault, $groupBillingPlans)
     {
         if ($this->getAPIVersionNumber() > 5.99) {
-            return $this->createOrganization($label, $hypervisorID, $billingPlanDefault);
+            return $this->createOrganization($label, $hypervisorID, $billingPlanDefault, $groupBillingPlans);
         }
 
         return $this->createUserGroup($label, $hypervisorID, $billingPlanDefault, $groupBillingPlans);
@@ -207,10 +220,10 @@ class OnAppvCDModule {
             } else {
                 $data = $this->getObject( 'BillingPlan' )->getList();
             }
-            
+
             return $this->buildArray( $data );
 	}
-        
+
         public function getRow( $row ){
             $result = $row;
             $rows = [
