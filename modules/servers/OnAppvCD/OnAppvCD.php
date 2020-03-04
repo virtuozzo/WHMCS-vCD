@@ -110,6 +110,7 @@ function OnAppvCD_ConfigOptions($params) {
 
             $data->servers->{$serverConfig->id}       = $module->getData();
             $data->servers->{$serverConfig->id}->Name = $serverConfig->name;
+            $data->servers->{$serverConfig->id}->OnAppVersion = $compareResult['apiVersion'];
         }
 
         if( $data->servers ) {
@@ -151,8 +152,7 @@ function OnAppvCD_CreateAccount( $params ) {
 
     if( $productSettings->OrganizationType == 1 ) {
         $userGroupID = $productSettings->UserGroups;
-    }
-    else {
+    } else {
         # create user group // todo add error handling and dupe title
         $labelVal                           = Capsule::table( 'tblcustomfieldsvalues' )
                                                      ->where( 'relid', $serviceID )
@@ -178,14 +178,18 @@ function OnAppvCD_CreateAccount( $params ) {
     $onAppUser->_login           = $userName;
     $onAppUser->_first_name      = $clientsDetails[ 'firstname' ];
     $onAppUser->_last_name       = $clientsDetails[ 'lastname' ];
+
     $row_billing_plan_id         = $module->getRow( '_billing_plan_id' );
     if ( $productSettings->OrganizationType == 1 ) {
         $onAppUser->{$row_billing_plan_id} = $productSettings->BillingPlanDefault;
     } else {
-        if ( is_array( $productSettings->GroupBillingPlans ) && count( $productSettings->GroupBillingPlans ) > 0 ) {
+        if ($module->getAPIVersionNumber() > 6.1) {
+            $onAppUser->{$row_billing_plan_id} = $productSettings->BillingPlanDefault;
+        } elseif ( is_array( $productSettings->GroupBillingPlans ) && count( $productSettings->GroupBillingPlans ) > 0 ) {
             $onAppUser->{$row_billing_plan_id} = $productSettings->GroupBillingPlans[0];
         }
     }
+
     $onAppUser->_role_ids        = $productSettings->Roles;
     $onAppUser->_time_zone       = $productSettings->TimeZone;
     $onAppUser->_user_group_id   = $userGroupID;

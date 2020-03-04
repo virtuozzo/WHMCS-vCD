@@ -194,8 +194,13 @@
 		<!-- billing plan default -->
 		<tr>
 			<td class="fieldlabel">
-				{assign var="itemName" value="BillingPlan"}
-				{assign var="itemDescription" value="`$itemName`Description" }
+				{if $servers->$selectedServer->OnAppVersion > 6.1}
+					{assign var="itemName" value="CompanyBucket"}
+					{assign var="itemDescription" value="`$itemName`Description" }
+				{else}
+					{assign var="itemName" value="BillingPlan"}
+					{assign var="itemDescription" value="`$itemName`Description" }
+				{/if}
 				{$lang->$itemName}
 			</td>
 			<td class="fieldarea">
@@ -221,8 +226,17 @@
 			<tr id="group-bp-row">
 		{/if}
 			<td class="fieldlabel">
-				{assign var="itemName" value="GroupBillingPlans"}
-				{assign var="itemDescription" value="`$itemName`Description" }
+				{if $servers->$selectedServer->OnAppVersion > 6.1}
+					{assign var="itemName" value="GroupBuckets"}
+					{assign var="itemDescription" value="`$itemName`Description" }
+				{else}
+					{assign var="itemName" value="GroupBillingPlans"}
+					{assign var="itemDescription" value="`$itemName`Description" }
+				{/if}
+
+
+
+
 				{$lang->$itemName}
 			</td>
 			<td class="fieldarea">

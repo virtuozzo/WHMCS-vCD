@@ -126,6 +126,10 @@ class OnAppvCDModule {
         $organizationObj->_create_user_group = true;
         $organizationObj->_user_bucket_id = $billingPlanDefault;
 
+        if ($this->getAPIVersionNumber() > 6.1) {
+            $organizationObj->_create_user_group = 1;
+        }
+
         $organizationObj->save();
 
         if (!$organizationObj->_id) {
@@ -241,7 +245,13 @@ class OnAppvCDModule {
         }
 
 	public function BillingCompanyPlans() {
-		$data = $this->getObject( 'BillingCompany' )->getList();
+        if ($this->getAPIVersionNumber() > 6.1) {
+            $onAppClass = 'BillingBucket';
+        } else {
+            $onAppClass = 'BillingCompany';
+        }
+
+		$data = $this->getObject($onAppClass)->getList();
 
 		return $this->buildArray( $data );
 	}
@@ -507,7 +517,7 @@ class OnAppvCDModule {
         );
 	}
 
-    private function getAPIVersionNumber()
+    public function getAPIVersionNumber()
     {
         $apiVersionArr = $this->getAPIVersion();
 
