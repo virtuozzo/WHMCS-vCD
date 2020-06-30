@@ -16,7 +16,7 @@ abstract class OnAppvCD_Cron {
     protected $printEnabled = false;
     protected $servers = array();
     protected $log = array();
-    protected $userGroup2costData = array();
+    protected $organization2costData = array();
     protected $monthlyBillsMonth = 0;
     protected $monthlyBillsYear = 0;
     protected $whmcsuserid  = -1;
@@ -80,28 +80,16 @@ abstract class OnAppvCD_Cron {
         return $data;
     }
 
-    protected function getUserGroup2costData( $client, $date ) {
-
+    protected function getOrganization2costData( $client, $date ) {
         $serverID = $client['configoption1'];
 
-        $this->userGroup2costData[ $serverID ] = array();
+        $this->organization2costData[ $serverID ] = array();
 
-        $authData = [
-            'configoption1'    => $serverID,
-            'serverusername'   => $this->servers[ $client['serverID'] ]['username'],
-            'serverpassword'   => $this->servers[ $client['serverID'] ]['password'],
-            'serverhttpprefix' => $this->servers[ $client['serverID'] ]['serverhttpprefix'],
-            'serverip'         => $this->servers[ $client['serverID'] ]['serverip'],
-            'serverhostname'   => $this->servers[ $client['serverID'] ]['serverhostname'],
-        ];
-
-        $module          = new OnAppvCDModule( $authData );
+        $module          = new OnAppvCDModule( $this->getAuthData($client) );
         $vdcs            = $module->getObject( 'VDCS' )->getList();
         $data            = new stdClass;
         $data->user_stat = new stdClass;
         foreach ( $vdcs as $vdc ) {
-            $attempts      = 50;
-            $je            = false;
             $fromTimestamp = $this->fromTimestamp;
             $tillTimestamp = $fromTimestamp;
             $tillTimestamp = min( $tillTimestamp + 86400, $this->tillTimestamp );
@@ -117,23 +105,24 @@ abstract class OnAppvCD_Cron {
                     'period[enddate]'   => $tillDateUTC,
                 );
 
+                $attempts      = 50;
                 $tmp = 0;
                 while ( $attempts >= 0 ) {
                     $attempts --;
-                    $stats = $module->getObject( 'VDCS_Statistics' )->getList( $vdc->id, $date );
-                    $je    = false;
+                    $vdcsStatistics = $module->getObject( 'VDCS_Statistics' );
+                    $stats = $vdcsStatistics->getList( $vdc->id, $date );
+                    if (! is_null($vdcsStatistics->getErrorsAsArray())) {
+                        continue;
+                    }
                     foreach ( $stats as $stat ) {
                         $tmp += $stat->cost;
-                        $je = true;
                     }
-                    if ( $je ) {
-                        break;
-                    }
+                    break;
                 }
-                if ( ! isset( $this->userGroup2costData[ $serverID ][ $vdc->_user_group_id ] ) ) {
-                    $this->userGroup2costData[ $serverID ][ $vdc->_user_group_id ] = array();
+                if ( ! isset( $this->organization2costData[ $serverID ][ $vdc->_organization_id ] ) ) {
+                    $this->organization2costData[ $serverID ][ $vdc->_organization_id ] = array();
                 }
-                $this->userGroup2costData[ $serverID ][ $vdc->_user_group_id ][ $vdc->id ] += $tmp;
+                $this->organization2costData[ $serverID ][ $vdc->_organization_id ][ $vdc->id ] += $tmp;
 
                 $fromTimestamp = $tillTimestamp;
                 $tillTimestamp = min( $tillTimestamp + 86400, $this->tillTimestamp );
@@ -141,12 +130,10 @@ abstract class OnAppvCD_Cron {
         }
     }
 
-    protected function getUserGroupByClient( $client ) {
-
+    private function getAuthData( $client ) {
         $serverID    = $client['configoption1'];
-        $onAppUserID = $client['OnAppUserID'];
 
-        $authData = [
+        return [
             'configoption1'    => $serverID,
             'serverusername'   => $this->servers[ $client['serverID'] ]['username'],
             'serverpassword'   => $this->servers[ $client['serverID'] ]['password'],
@@ -154,11 +141,21 @@ abstract class OnAppvCD_Cron {
             'serverip'         => $this->servers[ $client['serverID'] ]['serverip'],
             'serverhostname'   => $this->servers[ $client['serverID'] ]['serverhostname'],
         ];
+    }
 
-        $module = new OnAppvCDModule( $authData );
+    protected function getUserGroupIDByClient( $client ) {
+        $onAppUserID = $client['OnAppUserID'];
+
+        $module = new OnAppvCDModule( $this->getAuthData( $client ) );
         $user   = $module->getObject( 'User' )->load( $onAppUserID );
 
         return (int) $user->user_group_id;
+    }
+
+    protected function getOrganizationIDByClient( $client ) {
+        $module = new OnAppvCDModule( $this->getAuthData($client) );
+
+        return (int) $module->getOrganizationIDByUserGroupID( $this->getUserGroupIDByClient($client) );
     }
 
     protected function getResourcesData( $client, $date ) {
@@ -173,7 +170,7 @@ abstract class OnAppvCD_Cron {
         } else {
 
             if ( $this->monthlyBillsMonth > 0 ) {
-                $userGroupId = $this->getUserGroupByClient( $client );
+                $userGroupId = $this->getUserGroupIDByClient( $client );
                 if ( $userGroupId <= 0 ) {
                     return false;
                 }
@@ -199,25 +196,25 @@ abstract class OnAppvCD_Cron {
                 }
             } else {
                 $serverID = $client['configoption1'];
-                $userGroupId = $this->getUserGroupByClient( $client );
+                $organizationID = $this->getOrganizationIDByClient( $client );
 
-                if ( $userGroupId <= 0 ) {
+                if ( $organizationID <= 0 ) {
                     return false;
                 }
 
-                if ( ! isset( $this->userGroup2costData[ $serverID ] ) ) {
-                    $this->getUserGroup2costData( $client, $date );
+                if ( ! isset( $this->organization2costData[ $serverID ] ) ) {
+                    $this->getOrganization2costData( $client, $date );
                 }
-
+                
                 $data            = new stdClass;
                 $data->user_stat = new stdClass;
 
-                if ( ! is_array( $this->userGroup2costData[ $serverID ][ $userGroupId ] ) ) {
+                if ( ! is_array( $this->organization2costData[ $serverID ][ $organizationID ] ) ) {
                     return false;
                 }
 
                 $data->user_stat->total_cost = 0;
-                foreach ( $this->userGroup2costData[ $serverID ][ $userGroupId ] as $vdcId => $cost ) {
+                foreach ( $this->organization2costData[ $serverID ][ $organizationID ] as $vdcId => $cost ) {
                     $data->user_stat->total_cost += $cost;
                     $data->user_stat->{"vdcs" . $vdcId} = $cost;
                 }
@@ -381,7 +378,6 @@ abstract class OnAppvCD_Cron {
             $lang->Product . $client['packagename'],
             $lang->Period . $this->fromDate . ' - ' . $this->tillDate . $timeZone,
         );
-        $invoiceDescription = implode( PHP_EOL, $invoiceDescription );
 
         $return = array(
             'userid'           => $client['WHMCSUserID'],
@@ -390,37 +386,34 @@ abstract class OnAppvCD_Cron {
             'paymentmethod'    => $client['paymentmethod'],
             'taxrate'          => $taxrate,
             'sendinvoice'      => true,
-            'itemdescription1' => $invoiceDescription,
-            'itemamount1'      => 0,
-            'itemtaxed1'       => $taxed,
         );
 
-        if (property_exists($data, 'total_cost_with_discount')) {
-            $return = array_merge($return, array(
-                'itemdescription2' => $lang->total_cost,
-                'itemamount2' => $data->total_cost_with_discount,
-                'itemtaxed2' => $taxed,
-            ));
-        }else{
-            unset( $data->total_cost );
-            $i = 1;
-            foreach ( $data as $key => $value ) {
-                if ( $value > 0 ) {
 
-                    if ( isset( $lang->$key ) ) {
-                        $label = $lang->$key;
-                    } else {
-                        $label = $key;
-                    }
-                    $tmp    = array(
-                        'itemdescription' . ++ $i => $label,
-                        'itemamount' . $i         => $value,
-                        'itemtaxed' . $i          => $taxed,
-                    );
-                    $return = array_merge( $return, $tmp );
+        if (property_exists($data, 'total_cost_with_discount')) {
+            $totalCost = $data->total_cost_with_discount;
+        } else {
+            $totalCost = $data->total_cost;
+        }
+
+        foreach ( $data as $key => $value ) {
+            if ( $value > 0 ) {
+
+                if ( isset( $lang->$key ) ) {
+                    $label = $lang->$key;
+                } else {
+                    $label = $key;
                 }
+
+                $invoiceDescription[] = $label . ': ' . $value;
             }
         }
+
+        $invoiceDescription = implode(PHP_EOL, $invoiceDescription);
+        $return = array_merge($return, array(
+            'itemdescription1' => $invoiceDescription,
+            'itemamount1' => $totalCost,
+            'itemtaxed1' => $taxed,
+        ));
 
         if ( $this->printEnabled ) {
             print_r( $return );

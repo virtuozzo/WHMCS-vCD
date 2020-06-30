@@ -27,7 +27,9 @@ class OnAppvCDModule {
 
     private $loadedLangs = [];
 
-	private $vdcsesByUserGroupId = [];
+	private $vdcsesByOrganizationID = [];
+
+    private $organizationIDByUserGroupID = [];
 
 	public function __construct( $params = null ) {
 		if( $params != null ) {
@@ -624,17 +626,16 @@ class OnAppvCDModule {
         return $errorMsg;
     }
 
-    public function deleteCatalogsByClassNameAndUserGroupId( $userGroupId ) {
-        $this->debugLog( 'OnAppvCDmod', __FUNCTION__, 'deleteCatalogsByClassNameAndVDCSId userGroupId: ' . $userGroupId);
+    public function deleteCatalogsByClassNameAndUserGroupId( $organizationID ) {
+        $this->debugLog( 'OnAppvCDmod', __FUNCTION__, 'deleteCatalogsByClassNameAndVDCSId organizationID: ' . $organizationID);
         $className = "Catalogs";
 
         $errorMsg = "";
-        $obj  = $this->getObject( $className );
-        $list = $obj->getList();
+        $list = $this->getObject( $className )->getList();
 
         $idsToDelete = array();
         foreach ( $list as $item ) {
-            if ( $item->_user_group_id == $userGroupId ) {
+            if ( $item->_organization_id == $organizationID ) {
                 $this->debugLog( 'OnAppvCDmod', __FUNCTION__, 'deleteCatalogsByClassNameAndVDCSId idsToDelete: ' . $item->_id);
                 $idsToDelete[] = $item->_id;
             }
@@ -666,6 +667,7 @@ class OnAppvCDModule {
     {
         $this->debugLog('OnAppvCDmod', __FUNCTION__, 'find and delete an organization by user group');
         $this->debugLog('OnAppvCDmod', __FUNCTION__, 'userGroupId: ' . $userGroupIdToDelete);
+
         $obj = $this->getObject('Organizations');
         $orgList = $obj->getList();
 
@@ -741,44 +743,64 @@ class OnAppvCDModule {
         return '';
     }
 
-    public function getVDCSesByUserGroupId( $userGroupId ) {
-        if ( isset( $this->vdcsesByUserGroupId[ $userGroupId ] ) ) {
-            return $this->vdcsesByUserGroupId[ $userGroupId ];
+    public function getOrganizationIDByUserGroupID( $userGroupID ) {
+        if (isset($this->organizationIDByUserGroupID[$userGroupID])) {
+            return $this->organizationIDByUserGroupID[$userGroupID];
         }
+
+        $this->organizationIDByUserGroupID = [];
+
+        $orgList = $this->getObject('Organizations')->getList();
+
+        foreach ($orgList as $org) {
+            $this->organizationIDByUserGroupID[$org->_user_group_id] = $org->_id;
+        }
+
+        return $this->organizationIDByUserGroupID[$userGroupID];
+    }
+
+    public function getVDCSesByOrganizationID( $organizationID ) {
+        if ( isset( $this->vdcsesByOrganizationID[ $organizationID ] ) ) {
+            return $this->vdcsesByOrganizationID[ $organizationID ];
+        }
+
+        $this->vdcsesByOrganizationID = [];
 
         $OnAppVDCS   = $this->getObject( 'VDCS' );
         $OnAppVDCSes = $OnAppVDCS->getList();
 
-        $this->vdcsesByUserGroupId[ $userGroupId ] = [];
-        foreach ( $OnAppVDCSes as $vdcs ) {
-            if ( $vdcs->user_group_id == $userGroupId ) {
-                $this->debugLog( 'OnAppvCDmod', __FUNCTION__, 'vdcsesToDelete: ' . $vdcs->_id);
-                $this->vdcsesByUserGroupId[ $userGroupId ][] = $vdcs->_id;
+        $this->vdcsesByOrganizationID[ $organizationID ] = [];
+        foreach ( $OnAppVDCSes as $vdc ) {
+            if ( $vdc->_organization_id == $organizationID ) {
+                $this->debugLog( 'OnAppvCDmod', __FUNCTION__, 'vdcsesToDelete: ' . $vdc->_id);
+                $this->vdcsesByOrganizationID[ $organizationID ][] = $vdc->_id;
             }
         }
-        return $this->vdcsesByUserGroupId[ $userGroupId ];
+
+        return $this->vdcsesByOrganizationID[ $organizationID ];
     }
 
     public function clearUserGroupResources( $userGroupId ) {
+        $organizationID = $this->getOrganizationIDByUserGroupID($userGroupId);
         $errorMsg = "";
 
-        $vdcsesToClear = $this->getVDCSesByUserGroupId($userGroupId);
-
+        $vdcsesToClear = $this->getVDCSesByOrganizationID($organizationID);
+        
         foreach ( $vdcsesToClear as $vdcsId ) {
             $errorMsg .= $this->deleteAllByClassNameAndVDCSId('OrgNetwork', $vdcsId);
             $errorMsg .= $this->deleteAllByClassNameAndVDCSId('VDCS_EdgeGateway', $vdcsId);
         }
 
-        $errorMsg .= $this->deleteCatalogsByClassNameAndUserGroupId( $userGroupId );
+        $errorMsg .= $this->deleteCatalogsByClassNameAndUserGroupId( $organizationID );
 
         return $errorMsg;
-
     }
 
     public function deleteVDCSByUserGroupId( $userGroupId ) {
+        $organizationID = $this->getOrganizationIDByUserGroupID($userGroupId);
         $errorMsg = "";
 
-        $vdcsesToDelete = $this->getVDCSesByUserGroupId($userGroupId);
+        $vdcsesToDelete = $this->getVDCSesByOrganizationID($organizationID);
 
         foreach ( $vdcsesToDelete as $vdcsId ) {
             $errorMsg .= $this->deleteObject('VDCS', $vdcsId);

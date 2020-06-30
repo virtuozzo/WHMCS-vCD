@@ -128,7 +128,7 @@ function InvoicePaidHook_OnAppvCD( $vars ) {
 	if( $amount ) {
 		$payment = new OnApp_Payment;
 		$payment->auth( $server[ 'address' ], $server[ 'username' ], $server[ 'password' ] );
-		$payment->_user_id        = $data[ 'OnAppUserID' ];
+		$payment->_payer_id       = $data[ 'OnAppUserID' ];
 		$payment->_amount         = $amount;
 		$payment->_invoice_number = $invoiceID;
 		$payment->save();
