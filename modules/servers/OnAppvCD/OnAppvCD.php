@@ -4,6 +4,12 @@ use Illuminate\Database\Capsule\Manager as Capsule;
 
 require_once __DIR__ . '/includes/php/ModuleWrapper.php';
 
+if (!function_exists('is_countable')) {
+    function is_countable($var) {
+        return (is_array($var) || $var instanceof Countable);
+    }
+}
+
 function OnAppvCD_function_initConfigOption() {
 
     if ( isset( $_POST['id'] ) ) {
@@ -17,7 +23,7 @@ function OnAppvCD_function_initConfigOption() {
     $packageConfigOptions = [
         'configoption1' => 0,
     ];
-    if ( is_array( $data ) && count( $data ) > 0 ) {
+    if ( is_countable($data) && count( $data ) > 0 ) {
         $packageConfigOptions['configoption1'] = $data[0]->configoption1;
     }
 
@@ -34,7 +40,7 @@ function OnAppvCD_function_initConfigOptionfromDB($serverId = 0)
 
     $packageconfigoption = [];
     $packageconfigoption[3] = [];
-    if (is_array($data) && count($data) > 0) {
+    if (is_countable($data) && count($data) > 0) {
         for($i=1; $i<=24; $i++){
             $packageconfigoption[$i] = $data[0]->{"configoption".$i};
         }
